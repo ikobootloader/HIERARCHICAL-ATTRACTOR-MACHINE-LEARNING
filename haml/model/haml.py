@@ -13,7 +13,12 @@ from sklearn.preprocessing import StandardScaler
 
 from ..projection import HierarchicalSpaces
 from ..dynamics import Level, BidirectionalCoupling, ODEIntegrator
-from ..training import HAMLLoss, ConstrainedOptimizer
+from ..training import (
+    HAMLLoss,
+    ConstrainedOptimizer,
+    compute_level_accuracy,
+    compute_attraction_force_stats
+)
 from ..training.trainer import HAMLTrainer
 
 
@@ -383,6 +388,31 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
             final_states, _, _ = self.forward(X_torch)
 
         return [s.cpu().numpy() for s in final_states]
+
+    def diagnostics(self, X, y=None):
+        """
+        Retourne des diagnostics d'analyse après entraînement.
+
+        Args:
+            X (np.ndarray): Données d'évaluation
+            y (np.ndarray, optional): Labels (pour accuracy par niveau)
+
+        Returns:
+            dict: {'force_stats': ..., 'level_accuracy': ...}
+        """
+        if not self.is_fitted_:
+            raise RuntimeError("Model not fitted. Call fit() first.")
+
+        results = {
+            'force_stats': compute_attraction_force_stats(self, X),
+            'level_accuracy': None
+        }
+
+        if y is not None:
+            X_norm = self.scaler.transform(X)
+            results['level_accuracy'] = compute_level_accuracy(self, X_norm, y)
+
+        return results
 
     def get_params(self, deep=True):
         """Paramètres pour scikit-learn GridSearch."""

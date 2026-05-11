@@ -194,6 +194,9 @@ class BidirectionalCoupling(nn.Module):
         is_satisfied = alpha_total > alpha_min
 
         if not is_satisfied:
-            print(f"Warning: C2 not satisfied. α_bu + α_td = {alpha_total:.3f} < α_min = {alpha_min:.3f}")
+            print(
+                f"Warning: C2 not satisfied. alpha_bu + alpha_td = "
+                f"{alpha_total:.3f} < alpha_min = {alpha_min:.3f}"
+            )
 
         return is_satisfied

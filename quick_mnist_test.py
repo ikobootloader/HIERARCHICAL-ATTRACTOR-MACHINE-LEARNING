@@ -64,6 +64,7 @@ def main():
     time_train = time.time() - start
 
     acc_train = model_train.score(X_test, y_test)
+    diagnostics = model_train.diagnostics(X_test, y_test)
 
     print(f"\n3. Resultats")
     print("="*70)
@@ -71,6 +72,15 @@ def main():
     print(f"Avec entrainement:  {acc_train:.1%}")
     print(f"Amelioration:       +{(acc_train - acc_no_train)*100:.1f} points")
     print(f"Temps entrainement: {time_train:.1f}s")
+    if diagnostics["level_accuracy"] is not None:
+        level_acc = ", ".join([f"L{i}={a:.3f}" for i, a in enumerate(diagnostics["level_accuracy"])])
+        print(f"Accuracy par niveau: {level_acc}")
+    for level_name, stat in diagnostics["force_stats"].items():
+        print(
+            f"{level_name} force ||F||: "
+            f"mean={stat['mean']:.4f}, std={stat['std']:.4f}, "
+            f"p10={stat['p10']:.4f}, p50={stat['p50']:.4f}, p90={stat['p90']:.4f}"
+        )
     print("="*70)
 
     if acc_train > acc_no_train + 0.05:

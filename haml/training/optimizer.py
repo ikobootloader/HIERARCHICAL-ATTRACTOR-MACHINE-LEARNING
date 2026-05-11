@@ -66,3 +66,13 @@ class ConstrainedOptimizer:
     def load_state_dict(self, state_dict):
         """Charge state dict."""
         self.optimizer.load_state_dict(state_dict)
+
+    def set_lr(self, lr):
+        """Met à jour le learning rate sur tous les param groups."""
+        self.lr = lr
+        for group in self.optimizer.param_groups:
+            group["lr"] = lr
+
+    def get_lr(self):
+        """Retourne le learning rate courant (premier param group)."""
+        return self.optimizer.param_groups[0]["lr"]

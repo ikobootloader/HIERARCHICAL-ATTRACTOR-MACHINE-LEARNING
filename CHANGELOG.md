@@ -6,6 +6,93 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 
 ## [Non publié]
 
+### Modifié - 2026-05-11
+- README enrichi avec les résultats MNIST (subset 1500/500, 5 epochs) :
+  - Sans entraînement : `45.6%`
+  - Avec entraînement : `75.8%`
+  - Gain : `+30.2 points`
+- Progression par phases documentée (Phase 1, 2, 3) et cohérence avec la stratégie de couplage progressif.
+- Condition d'initialisation **I1** explicitée dans la documentation :
+  - `sigma_init^(l) = sqrt(d_l) * sigma_data^(l)`
+  - Motivation : éviter la saturation gaussienne et la dégénérescence des gradients en haute dimension.
+- Limitation opérationnelle ajoutée : temps d'entraînement élevé (~1786s pour 5 epochs sur 1500 exemples), avec priorité à la méthode adjointe.
+- Ajout de diagnostics d'entraînement et d'évaluation :
+  - accuracy par niveau hiérarchique à chaque epoch (`history['level_accuracy']`)
+  - statistiques de force d'attraction par niveau (`mean/std/p10/p50/p90`)
+  - nouvelle API `HAML.diagnostics(X, y=None)`
+  - intégration dans `quick_mnist_test.py` pour affichage direct.
+- Ajout du script d'ablation `experiments/mnist_coupling_ablation.py` (A/B reproductible):
+  - indépendant (`alpha_bu=0`, `alpha_td=0`) vs couplé (`alpha_bu=1`, `alpha_td=1`)
+  - protocole MNIST subset `1500/500`, `5` epochs, seed fixe.
+- Résultat de l'ablation (protocole court) :
+  - `75.8%` test en mode indépendant
+  - `75.8%` test en mode couplé
+  - delta couplage : `0.0` point sur cette configuration.
+- Correctif robustesse console Windows :
+  - log `C2` converti en ASCII dans `haml/dynamics/coupling.py`
+  - évite crash `UnicodeEncodeError` en terminal CP1252.
+- Ajout du script `experiments/concentric_coupling_ablation.py` :
+  - dataset synthétique d'anneaux concentriques alternés
+  - comparaison `independent` vs `coupled`
+  - export visuel des frontières de décision (`concentric_coupling_ablation.png`).
+- Résultat de l'ablation concentrique (protocole actuel, 12 epochs, M=3) :
+  - indépendant: `70.75%` test
+  - couplé: `69.00%` test
+  - delta couplage: `-1.75 point`.
+- Extension du protocole concentrique avec variante couplée renforcée :
+  - `alpha_bu=0.5`, `alpha_td=1.5`, `M=5`, `25` epochs, phases `(5,8,12)`
+  - accuracy test: `86.38%`
+  - gain vs baseline indépendant: `+15.63 points`
+  - contrepartie: coût de calcul nettement supérieur et instabilité inter-niveaux observée en fin d'entraînement.
+- Stabilisation ajoutée dans `HAMLTrainer` :
+  - monitoring `level_divergence = max(level_acc)-min(level_acc)` par epoch
+  - `lr_decay_on_divergence` (réduction de LR en cas de divergence)
+  - `early_stop_on_divergence` avec patience configurable
+  - historique enrichi : `level_divergence`, `lr`.
+- `ConstrainedOptimizer` étendu avec `set_lr()` / `get_lr()` pour pilotage dynamique du LR.
+- Validation concentrique stabilisée :
+  - variante couplée stabilisée: `82.88%` test
+  - indépendant: `70.88%` test
+  - gain: `+12.00 points`
+  - divergence détectée tardivement (epoch 23), suggérant un problème d'accumulation en fin de phase 3.
+- Stabilisation v2 ajoutée dans `HAMLTrainer` :
+  - `adaptive_mu_sep_phase3_only` pour n'activer `mu_sep` adaptatif qu'en phase 3
+  - `soft_landing_trigger_divergence` pour déclencher le soft landing sur divergence inter-niveaux
+  - soft landing appliqué une seule fois, avec motif (`epoch` ou `divergence`) loggé.
+- Protocole concentrique mis à jour (`experiments/concentric_coupling_ablation.py`) :
+  - `mu_sep_trigger_divergence=0.08`, croissance douce `x1.05`, plafond `0.35`
+  - soft landing non fixé par epoch, déclenché sur `level_div >= 0.12`
+  - facteur LR soft landing ajusté à `0.2`.
+- Résultat concentrique (stabilisation v2) :
+  - indépendant: `69.88%` test
+  - couplé tuned stable: `76.25%` test
+  - gain couplage: `+6.37 points`
+  - compromis: gain positif retrouvé, mais inférieur au pic instable (`86.38%`).
+- Ajustement fin de régulation `mu_sep` :
+  - ajout de `mu_sep_patience` dans `HAMLTrainer` (cooldown en epochs consécutives)
+  - trigger relevé à `0.11` sur le protocole concentrique
+  - `mu_sep` n'augmente plus à chaque fluctuation transitoire.
+- Résultat concentrique (trigger relevé + patience=2) :
+  - indépendant: `71.13%` test
+  - couplé tuned stable: `76.13%` test
+  - gain couplage: `+5.00 points`
+  - conclusion: réglage plus prudent, mais encore trop conservateur côté performance.
+- Ajout d'un mécanisme de stabilisation ciblé dans `HAMLTrainer` :
+  - `collapse_guard_enabled`
+  - `collapse_guard_start_epoch`
+  - `collapse_guard_delta_div_threshold`
+  - `collapse_guard_mu_sep_boost`
+  - `collapse_guard_lr_factor`
+  - objectif: détecter un saut brutal `delta(level_div)` et réagir fortement (boost `mu_sep` + chute LR).
+- Protocole concentrique mis à jour pour ce guard :
+  - pas de régulation progressive précoce (`adaptive_mu_sep=False`, pas de soft landing)
+  - activation guard à partir de l'epoch `18`.
+- Résultat concentrique (collapse guard) :
+  - indépendant: `70.38%` test
+  - couplé tuned + guard: `86.38%` test
+  - gain couplage: `+16.00 points`
+  - le collapse est bien détecté mais l'incohérence inter-niveaux persiste en fin de run (L1 proche hasard).
+
 ### À venir
 - Intégration méthode adjointe (torchdiffeq)
 - Extension VAE génératif (ELBO loss)
