@@ -156,6 +156,3 @@ Résultats avec attracteurs fixes après initialisation k-means :
 
 MIT
 
-## Contact
-
-Voir [CLAUDE.md](CLAUDE.md) pour les directives de développement.
