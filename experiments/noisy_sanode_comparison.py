@@ -63,7 +63,8 @@ def run_baselines(X_train, y_train, X_test, y_test):
     sa_node = SANodeReimpl(
         a=1.0,
         beta=0.8,
-        dt=0.05,
+        gamma=0.0,
+        dt=0.03,
         n_steps=120,
         lr=0.02,
         n_epochs=120,

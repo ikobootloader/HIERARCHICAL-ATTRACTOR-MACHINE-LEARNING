@@ -1,0 +1,118 @@
+{
+  "dataset": "make_moons",
+  "seed": 42,
+  "notes": "SA-nODE-reimpl tuned via grid-search on (a, dt, gamma) with fixed architecture.",
+  "search_space": {
+    "a": [
+      0.8,
+      1.0,
+      1.2
+    ],
+    "dt": [
+      0.03,
+      0.05,
+      0.08
+    ],
+    "gamma": [
+      0.0,
+      0.05,
+      0.1
+    ]
+  },
+  "best_primary": {
+    "params": {
+      "a": 1.0,
+      "dt": 0.03,
+      "gamma": 0.0
+    },
+    "per_noise": [
+      {
+        "noise": 0.1,
+        "accuracy": 0.8666666666666667
+      },
+      {
+        "noise": 0.2,
+        "accuracy": 0.864
+      },
+      {
+        "noise": 0.3,
+        "accuracy": 0.8586666666666667
+      },
+      {
+        "noise": 0.4,
+        "accuracy": 0.8333333333333334
+      }
+    ],
+    "mean_accuracy": 0.8556666666666667,
+    "accuracy_noise_040": 0.8333333333333334
+  },
+  "best_noise_040": {
+    "params": {
+      "a": 0.8,
+      "dt": 0.03,
+      "gamma": 0.1
+    },
+    "per_noise": [
+      {
+        "noise": 0.1,
+        "accuracy": 0.868
+      },
+      {
+        "noise": 0.2,
+        "accuracy": 0.8586666666666667
+      },
+      {
+        "noise": 0.3,
+        "accuracy": 0.852
+      },
+      {
+        "noise": 0.4,
+        "accuracy": 0.8373333333333334
+      }
+    ],
+    "mean_accuracy": 0.854,
+    "accuracy_noise_040": 0.8373333333333334
+  },
+  "results": [
+    {
+      "noise": 0.1,
+      "haml_independent": 0.988,
+      "haml_coupled": 0.996,
+      "sa_node_reimpl_tuned": 0.8666666666666667,
+      "knn": 0.9986666666666667,
+      "svm_rbf": 0.9986666666666667,
+      "delta_coupled_minus_independent_points": 0.8000000000000007,
+      "delta_coupled_minus_sa_node_reimpl_tuned_points": 12.93333333333333
+    },
+    {
+      "noise": 0.2,
+      "haml_independent": 0.8933333333333333,
+      "haml_coupled": 0.956,
+      "sa_node_reimpl_tuned": 0.864,
+      "knn": 0.9653333333333334,
+      "svm_rbf": 0.972,
+      "delta_coupled_minus_independent_points": 6.266666666666665,
+      "delta_coupled_minus_sa_node_reimpl_tuned_points": 9.199999999999998
+    },
+    {
+      "noise": 0.3,
+      "haml_independent": 0.8813333333333333,
+      "haml_coupled": 0.9053333333333333,
+      "sa_node_reimpl_tuned": 0.8586666666666667,
+      "knn": 0.908,
+      "svm_rbf": 0.9133333333333333,
+      "delta_coupled_minus_independent_points": 2.400000000000002,
+      "delta_coupled_minus_sa_node_reimpl_tuned_points": 4.666666666666663
+    },
+    {
+      "noise": 0.4,
+      "haml_independent": 0.8466666666666667,
+      "haml_coupled": 0.8506666666666667,
+      "sa_node_reimpl_tuned": 0.8333333333333334,
+      "knn": 0.8333333333333334,
+      "svm_rbf": 0.8733333333333333,
+      "delta_coupled_minus_independent_points": 0.40000000000000036,
+      "delta_coupled_minus_sa_node_reimpl_tuned_points": 1.7333333333333312
+    }
+  ]
+}
