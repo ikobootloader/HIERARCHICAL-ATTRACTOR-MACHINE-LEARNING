@@ -68,7 +68,23 @@ Degradation from noise `0.10` to `0.40`:
 
 3. Interpretation:
 - The hierarchical mechanism provides substantial gains when signal structure remains exploitable.
-- Under stronger corruption, hierarchy/projection dependence becomes a sensitivity factor.
+- Under stronger corruption, PCA projections capture noise structure rather than class structure, which weakens hierarchical signal quality.
+- SA-nODE operates directly in raw input space and is less exposed to projection-induced sensitivity.
+
+## Coupling Ablation Inside HAML
+To isolate the effect of bidirectional coupling (and not only the broader HAML architecture), we compare independent vs coupled HAML under the same protocol.
+
+| Noise | HAML Independent | HAML Coupled | Coupling Delta |
+|---|---:|---:|---:|
+| 0.10 | 99.60% | 99.60% | +0.00 pts |
+| 0.20 | 89.33% | 95.60% | +6.27 pts |
+| 0.30 | 88.13% | 90.53% | +2.40 pts |
+| 0.40 | 84.67% | 85.07% | +0.40 pts |
+
+This confirms the core pattern expected from the theory:
+- negligible gain in an easy regime (low noise),
+- maximal gain in an intermediate ambiguity regime,
+- small gain in a heavily corrupted regime.
 
 ## Valid Claims
 - In a controlled implementation setting, hierarchical bidirectional dynamics improve absolute performance over a flat SA-nODE-style model across tested noise levels.
