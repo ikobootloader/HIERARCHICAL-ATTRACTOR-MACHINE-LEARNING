@@ -101,3 +101,37 @@ This confirms the core pattern expected from the theory:
   - `experiments/noisy_sanode_comparison_output.txt`
   - `experiments/tune_sanode_reimpl_output.txt`
   - `experiments/noisy_sanode_comparison_tuned_summary.json`
+
+## Integrator Benchmark: RK4 vs Adjoint
+To validate the new adjoint path (`torchdiffeq`) on the same HAML setup, we ran a controlled benchmark with fixed seed and identical training configuration.
+
+Configuration:
+- Dataset: `make_moons`, `n_samples=1800`, `noise=0.25`
+- Seed: `42`
+- Train/Test: `75/25`
+- HAML: coupled (`alpha_bu=0.5`, `alpha_td=1.5`)
+- Training: `5` epochs, batch size `64`, `max_steps=35`, `dt=0.1`
+
+Results:
+| Method | Accuracy | Elapsed Time | Peak tracemalloc |
+|---|---:|---:|---:|
+| RK4 | 87.33% | 190.50 s | 66.16 MB |
+| Adjoint | 87.33% | 356.71 s | 0.45 MB |
+
+Relative:
+- Time ratio (Adjoint / RK4): `1.87x`
+- Accuracy delta (Adjoint - RK4): `0.00 pt`
+- Peak tracemalloc delta (Adjoint - RK4): `-65.71 MB`
+
+Interpretation:
+- On this CPU setup, adjoint preserved accuracy while substantially reducing traced peak memory.
+- The memory gain came with a significant runtime cost.
+- This is consistent with adjoint trade-offs (memory efficiency vs compute overhead), and motivates method selection by resource constraints.
+- In the current regime (short trajectories on CPU), RK4 is faster; adjoint should be viewed as an enabler for memory-constrained regimes rather than a speed optimization here.
+
+Practical implication:
+- Adjoint is primarily useful to unlock configurations that may be inaccessible with direct RK4 (longer trajectories, larger batch sizes, tighter memory budgets), while preserving predictive performance.
+
+Current limitations of this benchmark:
+- The time crossover point (trajectory length / batch size where adjoint becomes faster) was not measured yet.
+- The benchmark was run on CPU only; memory/time trade-offs can differ on GPU, where memory pressure is typically the dominant bottleneck.

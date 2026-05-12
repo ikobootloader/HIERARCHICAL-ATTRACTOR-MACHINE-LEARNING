@@ -42,6 +42,34 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
   - bruit `0.20`: `95.60%` vs `85.73%` (delta `+9.87 pts`)
   - bruit `0.30`: `90.53%` vs `84.53%` (delta `+6.00 pts`)
   - bruit `0.40`: `85.07%` vs `83.47%` (delta `+1.60 pt`).
+- Ajout d'une recherche d'hyperparamètres SA-nODE-reimpl (`experiments/tune_sanode_reimpl.py`) :
+  - grille testée (seed fixe, architecture inchangée):
+    - `a in {0.8, 1.0, 1.2}`
+    - `dt in {0.03, 0.05, 0.08}`
+    - `gamma in {0.0, 0.05, 0.1}`
+  - meilleure config moyenne multi-bruit: `a=1.0`, `dt=0.03`, `gamma=0.0`
+  - meilleure config bruit fort (`0.40`): `a=0.8`, `dt=0.03`, `gamma=0.1` (gain limité).
+- Résultats consolidés avec SA-nODE-reimpl tuned (HAML inchangé, même protocole/seed):
+  - bruit `0.10`: `99.60%` vs `86.67%` (delta `+12.93 pts`)
+  - bruit `0.20`: `95.60%` vs `86.40%` (delta `+9.20 pts`)
+  - bruit `0.30`: `90.53%` vs `85.87%` (delta `+4.67 pts`)
+  - bruit `0.40`: `85.07%` vs `83.33%` (delta `+1.73 pt`)
+  - dégradation `0.10 -> 0.40`: HAML couplé `-14.53 pts`, SA-nODE-reimpl tuned `-3.33 pts`.
+- Sorties enregistrées:
+  - `experiments/tune_sanode_reimpl_output.txt`
+  - `experiments/noisy_sanode_comparison_tuned_summary.json`.
+- Intégration de la méthode adjointe dans l'intégrateur ODE (`haml/dynamics/integrator.py`):
+  - support effectif `integrator_method='adjoint'` via `torchdiffeq.odeint_adjoint`
+  - conversion interne états hiérarchiques <-> état aplati pour solveur ODE
+  - détection de convergence conservée sur la trajectoire discrète
+  - fallback automatique vers RK4 si `torchdiffeq` indisponible (warning unique).
+- Dépendance runtime ajoutée: `torchdiffeq>=0.2.3` dans `requirements.txt`.
+- Ajout d'un smoke test dédié: `experiments/adjoint_smoke_test.py`.
+- Benchmark contrôlé RK4 vs Adjoint ajouté (`experiments/adjoint_vs_rk4_benchmark.py`):
+  - configuration identique, seed fixe `42`
+  - résultat: accuracy identique (`87.33%` vs `87.33%`)
+  - coût/ressources: adjoint plus lent (`356.71s` vs `190.50s`, `1.87x`) mais pic mémoire tracée nettement réduit (`0.45 MB` vs `66.16 MB`).
+- Sortie enregistrée: `experiments/adjoint_vs_rk4_benchmark_output.txt`.
 
 ### Modifié - 2026-05-11
 - README enrichi avec les résultats MNIST (subset 1500/500, 5 epochs) :

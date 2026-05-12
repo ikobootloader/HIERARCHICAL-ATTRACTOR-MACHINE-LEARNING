@@ -1,4 +1,4 @@
-# HAML Requirements
+﻿# HAML Requirements
 
 # Core
 numpy>=1.20.0
@@ -9,8 +9,8 @@ scikit-learn>=1.0.0
 matplotlib>=3.5.0
 seaborn>=0.11.0
 
-# ODE Integration (optional, pour méthode adjointe)
-# torchdiffeq>=0.2.3
+# ODE Integration (adjoint method)
+torchdiffeq>=0.2.3
 
 # Utilities
 pyyaml>=6.0

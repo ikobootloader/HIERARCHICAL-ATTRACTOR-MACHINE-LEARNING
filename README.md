@@ -189,22 +189,29 @@ Comparaison additionnelle HAML vs SA-nODE-reimpl (même protocole bruité, seed 
   - baseline `SA-nODE-reimpl` = espace unique + attracteurs binaires plantés ±a + potentiel double-puits analytique + couplage linéaire entraîné
   - réimplémentation interne inspirée de la publication (pas un code officiel auteur)
   - objectif: ablation architecturale contrôlée pour isoler l'effet de la hiérarchie bidirectionnelle, à implémentation comparable
+- Pré-optimisation SA-nODE-reimpl (seed fixe, architecture figée) :
+  - grille testée: `a in {0.8, 1.0, 1.2}`, `dt in {0.03, 0.05, 0.08}`, `gamma in {0.0, 0.05, 0.1}`
+  - critère principal: meilleure accuracy moyenne sur bruits `[0.10, 0.20, 0.30, 0.40]`
+  - configuration retenue: `a=1.0`, `dt=0.03`, `gamma=0.0`
+  - meilleure config ciblée bruit fort (`0.40`): `a=0.8`, `dt=0.03`, `gamma=0.1` (gain limité)
 - Résultats :
-  - bruit `0.10` : HAML couplé `99.60%` vs SA-nODE-reimpl `87.20%` (delta `+12.40 points`)
-  - bruit `0.20` : HAML couplé `95.60%` vs SA-nODE-reimpl `85.73%` (delta `+9.87 points`)
-  - bruit `0.30` : HAML couplé `90.53%` vs SA-nODE-reimpl `84.53%` (delta `+6.00 points`)
-  - bruit `0.40` : HAML couplé `85.07%` vs SA-nODE-reimpl `83.47%` (delta `+1.60 point`)
-- Dégradation `0.20 -> 0.40` :
-  - HAML couplé : `-10.53 points`
-  - SA-nODE-reimpl : `-2.26 points`
+  - bruit `0.10` : HAML couplé `99.60%` vs SA-nODE-reimpl tuned `86.67%` (delta `+12.93 points`)
+  - bruit `0.20` : HAML couplé `95.60%` vs SA-nODE-reimpl tuned `86.40%` (delta `+9.20 points`)
+  - bruit `0.30` : HAML couplé `90.53%` vs SA-nODE-reimpl tuned `85.87%` (delta `+4.67 points`)
+  - bruit `0.40` : HAML couplé `85.07%` vs SA-nODE-reimpl tuned `83.33%` (delta `+1.73 point`)
+- Dégradation `0.10 -> 0.40` :
+  - HAML couplé : `-14.53 points`
+  - SA-nODE-reimpl tuned : `-3.33 points`
 - Lecture :
   - HAML couplé domine en niveau absolu sur tout le spectre de bruit testé.
-  - la baseline SA-nODE-reimpl part plus bas et dégrade moins vite, ce qui suggère un régime plus conservateur/sous-ajusté.
+  - SA-nODE-reimpl tuned dégrade moins vite sous bruit croissant, ce qui indique un trade-off robustesse relative vs niveau absolu.
+  - à bruit `0.40`, l'écart reste faible (`+1.73 pt`) et doit être confirmé multi-seeds avant claim fort.
   - conclusion défendable: dans des conditions d'implémentation contrôlées, la hiérarchie bidirectionnelle surpasse le modèle plat sur tous les niveaux de bruit testés.
   - limite explicite: ces résultats ne permettent pas de conclure directement contre l'implémentation officielle SA-nODE; un benchmark externe dédié reste nécessaire.
 
 Commande de reproduction :
 - `python experiments/noisy_sanode_comparison.py`
+- `python experiments/tune_sanode_reimpl.py`
 
 Variante couplée renforcée (même script) :
 - `alpha_bu=0.5`, `alpha_td=1.5`, `M=5`, `25` epochs, phases `(5,8,12)`
@@ -340,7 +347,7 @@ Résultats avec attracteurs fixes après initialisation k-means :
 - [x] **Entraînement par gradient (backprop ODE)**
 - [x] **Couplage progressif (3 phases)**
 - [x] **Amélioration +30 pts make_moons**
-- [ ] Méthode adjointe (torchdiffeq)
+- [x] Méthode adjointe (torchdiffeq, avec fallback RK4 si indisponible)
 - [ ] Tests MNIST complets
 - [ ] Extension VAE génératif
 
