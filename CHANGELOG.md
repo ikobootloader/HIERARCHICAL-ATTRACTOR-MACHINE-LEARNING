@@ -34,6 +34,14 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
     non équivalente à l'implémentation officielle SA-nODE de la publication.
   - la comparaison est positionnée comme ablation architecturale contrôlée (effet hiérarchie bidirectionnelle vs modèle plat), et non comme claim définitif contre SA-nODE officiel.
 - Sortie complète enregistrée dans `experiments/noisy_sanode_comparison_output.txt`.
+- Révision de la baseline SA-nODE:
+  - remplacement du proxy simple par une réimplémentation plus fidèle (`haml/baselines/sanode.py`)
+  - éléments inclus: espace plat, attracteurs binaires ±a plantés, potentiel double-puits analytique, couplage linéaire entraîné.
+- Résultats mis à jour `HAML couplé` vs `SA-nODE-reimpl` (accuracy test):
+  - bruit `0.10`: `99.60%` vs `87.20%` (delta `+12.40 pts`)
+  - bruit `0.20`: `95.60%` vs `85.73%` (delta `+9.87 pts`)
+  - bruit `0.30`: `90.53%` vs `84.53%` (delta `+6.00 pts`)
+  - bruit `0.40`: `85.07%` vs `83.47%` (delta `+1.60 pt`).
 
 ### Modifié - 2026-05-11
 - README enrichi avec les résultats MNIST (subset 1500/500, 5 epochs) :
