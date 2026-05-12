@@ -89,6 +89,8 @@ This confirms the core pattern expected from the theory:
 ## Valid Claims
 - In a controlled implementation setting, hierarchical bidirectional dynamics improve absolute performance over a flat SA-nODE-style model across tested noise levels.
 - At high noise (`0.40`), the margin is small (`+1.73 pts`) and should be treated as fragile in single-seed analysis.
+- Bidirectional coupling provides a measurable gain over independent HAML in intermediate noise regimes (`+6.27 pts` at noise `0.20`), with negligible effect at low and high noise, consistent with the theoretical prediction of top-down guidance under local ambiguity.
+- Adjoint integration preserves predictive accuracy while reducing peak traced memory by about `147x`, at a runtime cost of about `1.87x` on CPU; this supports adjoint as an enabler for memory-constrained configurations rather than a general speed optimization.
 
 ## Limits
 - SA-nODE benchmark is a paper-inspired internal reimplementation, not the authors' official codebase.
