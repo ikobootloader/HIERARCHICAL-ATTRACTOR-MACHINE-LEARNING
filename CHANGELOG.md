@@ -6,6 +6,22 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 
 ## [Non publié]
 
+### Modifié - 2026-05-12
+- Exécution du benchmark bruité reproductible `experiments/noisy_benchmark.py` (seed fixe `42`, `n_samples=3000`) comparant :
+  - HAML indépendant (`alpha_bu=0`, `alpha_td=0`)
+  - HAML couplé (`alpha_bu=0.5`, `alpha_td=1.5`)
+  - baselines `KNN` et `SVM RBF`.
+- Résultats (accuracy test) :
+  - bruit `0.10` : HAML ind. `99.60%`, HAML cpl. `99.60%`, KNN `99.87%`, SVM `99.87%`, delta `+0.00 point`
+  - bruit `0.20` : HAML ind. `89.33%`, HAML cpl. `95.60%`, KNN `96.53%`, SVM `97.20%`, delta `+6.27 points`
+  - bruit `0.30` : HAML ind. `88.13%`, HAML cpl. `90.53%`, KNN `90.80%`, SVM `91.33%`, delta `+2.40 points`
+  - bruit `0.40` : HAML ind. `84.67%`, HAML cpl. `85.07%`, KNN `83.33%`, SVM `87.33%`, delta `+0.40 point`.
+- Sortie complète enregistrée dans `experiments/noisy_benchmark_output.txt` (incluant le JSON final des résultats).
+- Documentation enrichie avec lecture empirique consolidée :
+  - dégradation bruit `0.20 -> 0.40` : KNN `-13.20 pts`, HAML couplé `-10.53 pts`, SVM `-9.87 pts`
+  - pattern en cloche du gain de couplage (`0.00`, `+6.27`, `+2.40`, `+0.40`) cohérent avec l'hypothèse top-down
+  - synthèse théorie/expérience explicitée et point restant identifié pour publication : benchmark direct vs SA-nODE.
+
 ### Modifié - 2026-05-11
 - README enrichi avec les résultats MNIST (subset 1500/500, 5 epochs) :
   - Sans entraînement : `45.6%`

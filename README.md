@@ -127,6 +127,63 @@ Ablation couplage sur anneaux concentriques alternés (train/test: 2400/800) :
 Commande de reproduction :
 - `python experiments/concentric_coupling_ablation.py`
 
+Benchmark données bruitées `make_moons` (seed `42`, `n_samples=3000`) :
+- Bruit `0.10` :
+  - HAML indépendant: `99.60%`
+  - HAML couplé: `99.60%`
+  - KNN: `99.87%`
+  - SVM RBF: `99.87%`
+  - Delta couplé - indépendant: `+0.00 point`
+- Bruit `0.20` :
+  - HAML indépendant: `89.33%`
+  - HAML couplé: `95.60%`
+  - KNN: `96.53%`
+  - SVM RBF: `97.20%`
+  - Delta couplé - indépendant: `+6.27 points`
+- Bruit `0.30` :
+  - HAML indépendant: `88.13%`
+  - HAML couplé: `90.53%`
+  - KNN: `90.80%`
+  - SVM RBF: `91.33%`
+  - Delta couplé - indépendant: `+2.40 points`
+- Bruit `0.40` :
+  - HAML indépendant: `84.67%`
+  - HAML couplé: `85.07%`
+  - KNN: `83.33%`
+  - SVM RBF: `87.33%`
+  - Delta couplé - indépendant: `+0.40 point`
+
+Commande de reproduction :
+- `python experiments/noisy_benchmark.py`
+
+Lecture empirique (bruit croissant) :
+- Dégradation `0.20 -> 0.40` :
+  - KNN : `-13.20 points` (de `96.53%` à `83.33%`)
+  - HAML couplé : `-10.53 points` (de `95.60%` à `85.07%`)
+  - SVM RBF : `-9.87 points` (de `97.20%` à `87.33%`)
+- Lecture :
+  - HAML couplé est plus robuste que KNN sous bruit croissant.
+  - HAML couplé reste proche de SVM en robustesse, sans le dépasser systématiquement.
+  - La contribution principale est le gain intra-modèle couplé vs indépendant.
+
+Delta couplage (HAML couplé - HAML indépendant) :
+- bruit `0.10` : `+0.00 point`
+- bruit `0.20` : `+6.27 points`
+- bruit `0.30` : `+2.40 points`
+- bruit `0.40` : `+0.40 point`
+
+Interprétation :
+- Le gain du couplage suit un profil en cloche : nul à bruit faible, maximal à bruit intermédiaire, faible à bruit fort.
+- Ce comportement est cohérent avec l'hypothèse théorique : le top-down apporte surtout quand le signal local est ambigu mais encore exploitable.
+
+Synthèse théorie/expérience (état actuel) :
+- Anneaux concentriques : gain couplé vs indépendant jusqu'à `+16.00 points` (cas structurel favorable à la hiérarchie).
+- Données bruitées : gain maximal `+6.27 points` à bruit `0.20`, avec robustesse proche SVM et meilleure que KNN.
+- Observation dynamique : récupération de niveaux intermédiaires (L1) observée sur certains runs couplés, compatible avec le guidage top-down attendu.
+
+Point restant pour le positionnement publication :
+- Ajouter un benchmark comparatif direct avec SA-nODE sur protocole bruité comparable (même split, même seed, mêmes métriques).
+
 Variante couplée renforcée (même script) :
 - `alpha_bu=0.5`, `alpha_td=1.5`, `M=5`, `25` epochs, phases `(5,8,12)`
 - Accuracy test : `86.38%`
