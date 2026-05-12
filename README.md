@@ -184,6 +184,28 @@ Synthèse théorie/expérience (état actuel) :
 Point restant pour le positionnement publication :
 - Ajouter un benchmark comparatif direct avec SA-nODE sur protocole bruité comparable (même split, même seed, mêmes métriques).
 
+Comparaison additionnelle HAML vs SA-nODE-like (même protocole bruité, seed `42`) :
+- Note méthode :
+  - baseline `SA-nODE-like` = espace unique + dynamique double-puits + signatures binaires de classe
+  - ce n'est pas l'implémentation officielle SA-nODE de Marino et al. (proxy reproductible interne)
+  - objectif de cette baseline: ablation architecturale contrôlée pour isoler l'effet de la hiérarchie bidirectionnelle, à implémentation comparable
+- Résultats :
+  - bruit `0.10` : HAML couplé `99.60%` vs SA-nODE-like `82.27%` (delta `+17.33 points`)
+  - bruit `0.20` : HAML couplé `95.60%` vs SA-nODE-like `81.20%` (delta `+14.40 points`)
+  - bruit `0.30` : HAML couplé `90.53%` vs SA-nODE-like `79.87%` (delta `+10.67 points`)
+  - bruit `0.40` : HAML couplé `85.07%` vs SA-nODE-like `76.67%` (delta `+8.40 points`)
+- Dégradation `0.20 -> 0.40` :
+  - HAML couplé : `-10.53 points`
+  - SA-nODE-like : `-4.53 points`
+- Lecture :
+  - HAML couplé domine en niveau absolu sur tout le spectre de bruit testé.
+  - la baseline SA-nODE-like part plus bas et dégrade moins vite, ce qui suggère un régime plus biaisé/sous-ajusté.
+  - conclusion défendable: dans des conditions d'implémentation contrôlées, la hiérarchie bidirectionnelle surpasse le modèle plat sur tous les niveaux de bruit testés.
+  - limite explicite: ces résultats ne permettent pas de conclure directement contre l'implémentation officielle SA-nODE; un benchmark externe dédié reste nécessaire.
+
+Commande de reproduction :
+- `python experiments/noisy_sanode_comparison.py`
+
 Variante couplée renforcée (même script) :
 - `alpha_bu=0.5`, `alpha_td=1.5`, `M=5`, `25` epochs, phases `(5,8,12)`
 - Accuracy test : `86.38%`

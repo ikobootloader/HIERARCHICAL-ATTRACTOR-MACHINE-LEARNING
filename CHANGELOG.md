@@ -21,6 +21,19 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
   - dégradation bruit `0.20 -> 0.40` : KNN `-13.20 pts`, HAML couplé `-10.53 pts`, SVM `-9.87 pts`
   - pattern en cloche du gain de couplage (`0.00`, `+6.27`, `+2.40`, `+0.40`) cohérent avec l'hypothèse top-down
   - synthèse théorie/expérience explicitée et point restant identifié pour publication : benchmark direct vs SA-nODE.
+- Ajout du script `experiments/noisy_sanode_comparison.py` :
+  - protocole aligné avec le benchmark bruité (`make_moons`, seed `42`, split identique)
+  - comparaison HAML ind./couplé, `SA-nODE-like`, KNN, SVM.
+- Résultats `HAML couplé` vs `SA-nODE-like` (accuracy test) :
+  - bruit `0.10` : `99.60%` vs `82.27%` (delta `+17.33 pts`)
+  - bruit `0.20` : `95.60%` vs `81.20%` (delta `+14.40 pts`)
+  - bruit `0.30` : `90.53%` vs `79.87%` (delta `+10.67 pts`)
+  - bruit `0.40` : `85.07%` vs `76.67%` (delta `+8.40 pts`).
+- Clarification méthodologique ajoutée :
+  - `SA-nODE-like` est une baseline proxy interne (dynamique simple double-puits, espace unique),
+    non équivalente à l'implémentation officielle SA-nODE de la publication.
+  - la comparaison est positionnée comme ablation architecturale contrôlée (effet hiérarchie bidirectionnelle vs modèle plat), et non comme claim définitif contre SA-nODE officiel.
+- Sortie complète enregistrée dans `experiments/noisy_sanode_comparison_output.txt`.
 
 ### Modifié - 2026-05-11
 - README enrichi avec les résultats MNIST (subset 1500/500, 5 epochs) :
