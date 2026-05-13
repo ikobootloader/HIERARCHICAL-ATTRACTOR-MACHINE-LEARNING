@@ -12,6 +12,16 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 - Ajout d'une aggregation statistique (moyenne/ecart-type/min/max) des accuracies et temps d'entrainement.
 - Export standard des resultats dans `experiments/concentric_coupling_ablation_summary.json`.
 - Le script conserve une figure optionnelle de frontieres pour le premier run uniquement.
+- README enrichi avec l'analyse concentrique qualitative + quantitative :
+  - ajout d'un résultat multi-seeds observé (`n_runs=2`, seeds `42,43`) : delta moyen couplé vs indépendant `+13.00 points`
+  - explicitation du signal qualitatif de frontière (topologie annulaire capturée en mode couplé, non capturée en mode indépendant)
+  - réserve documentée sur les lobes parasites et l'instabilité inter-niveaux tardive.
+- Clarification scientifique ajoutée sur la comparaison bruitée HAML vs SA-nODE-reimpl :
+  - la dégradation plus faible de SA-nODE-reimpl sous bruit croissant est maintenue comme tension ouverte à expliquer (pas masquée comme simple trade-off descriptif).
+- Reformulation de la claim mémoire adjointe :
+  - le ratio `0.45 MB` vs `66.16 MB` est précisé comme métrique `tracemalloc` (mémoire Python tracée), proxy partiel et non mesure de mémoire globale processus/GPU.
+- Ajout d'une prédiction falsifiable explicite pour l'hypothèse "ambiguïté intermédiaire" :
+  - le profil en cloche du gain de couplage doit se reproduire en multi-seeds sur d'autres datasets.
 ### Modifié - 2026-05-12
 - Exécution du benchmark bruité reproductible `experiments/noisy_benchmark.py` (seed fixe `42`, `n_samples=3000`) comparant :
   - HAML indépendant (`alpha_bu=0`, `alpha_td=0`)

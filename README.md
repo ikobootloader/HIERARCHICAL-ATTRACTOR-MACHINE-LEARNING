@@ -122,6 +122,16 @@ Ablation couplage sur anneaux concentriques alternes :
 - Protocole principal : multi-seeds (`n_runs=5` par defaut) avec aggregation statistique.
 - Sortie standard : `experiments/concentric_coupling_ablation_summary.json`
 - Figure optionnelle : `concentric_coupling_ablation.png` (premier run uniquement, via flag)
+- Résultat multi-seeds observé (run court `n_runs=2`, seeds `42,43`) :
+  - indépendant : `66.19% ± 3.69`
+  - couplé tuned : `79.19% ± 5.69`
+  - delta moyen : `+13.00 points`
+- Lecture qualitative (figure) :
+  - indépendant : frontière majoritairement convexe, ne capture pas correctement la topologie annulaire.
+  - couplé tuned : frontière non convexe alignée avec la géométrie en anneaux alternés.
+  - interprétation : différence qualitative cohérente avec `P5` (classe de fonctions représentables plus large en hiérarchie bidirectionnelle).
+- Réserve :
+  - présence possible de lobes parasites sur certains runs couplés, compatible avec les instabilités inter-niveaux observées en fin d'entraînement.
 
 Commande de reproduction :
 - `python experiments/concentric_coupling_ablation.py`
@@ -175,6 +185,8 @@ Delta couplage (HAML couplé - HAML indépendant) :
 Interprétation :
 - Le gain du couplage suit un profil en cloche : nul à bruit faible, maximal à bruit intermédiaire, faible à bruit fort.
 - Ce comportement est cohérent avec l'hypothèse théorique : le top-down apporte surtout quand le signal local est ambigu mais encore exploitable.
+- Prédiction falsifiable associée :
+  - si l'hypothèse est correcte, le profil en cloche du gain couplé-vs-indépendant doit se reproduire sur plusieurs datasets et en multi-seeds, avec un maximum à bruit intermédiaire et un gain réduit aux extrêmes (bruit faible et bruit fort).
 
 Synthèse théorie/expérience (état actuel) :
 - Anneaux concentriques : gain couplé vs indépendant jusqu'à `+16.00 points` (cas structurel favorable à la hiérarchie).
@@ -204,10 +216,15 @@ Comparaison additionnelle HAML vs SA-nODE-reimpl (même protocole bruité, seed 
   - SA-nODE-reimpl tuned : `-3.33 points`
 - Lecture :
   - HAML couplé domine en niveau absolu sur tout le spectre de bruit testé.
-  - SA-nODE-reimpl tuned dégrade moins vite sous bruit croissant, ce qui indique un trade-off robustesse relative vs niveau absolu.
+  - SA-nODE-reimpl tuned dégrade moins vite sous bruit croissant ; ce point est une tension ouverte avec l'intuition "top-down plus robuste" et doit être expliqué par une analyse mécanistique dédiée (dynamique des niveaux, saturation/instabilité sous bruit fort).
   - à bruit `0.40`, l'écart reste faible (`+1.73 pt`) et doit être confirmé multi-seeds avant claim fort.
   - conclusion défendable: dans des conditions d'implémentation contrôlées, la hiérarchie bidirectionnelle surpasse le modèle plat sur tous les niveaux de bruit testés.
   - limite explicite: ces résultats ne permettent pas de conclure directement contre l'implémentation officielle SA-nODE; un benchmark externe dédié reste nécessaire.
+
+Méthode adjointe (précaution d'interprétation mémoire) :
+- Le gain `0.45 MB` vs `66.16 MB` rapporté dans le benchmark RK4 vs adjoint provient de `tracemalloc` (allocations Python tracées).
+- Ce chiffre décrit un proxy partiel de mémoire runtime ; il ne mesure ni la mémoire totale du processus, ni la mémoire GPU.
+- La formulation correcte est donc : "forte réduction de la mémoire Python tracée", et non "réduction mémoire globale" sans benchmark système/GPU complémentaire.
 
 Commande de reproduction :
 - `python experiments/noisy_sanode_comparison.py`
