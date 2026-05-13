@@ -1,17 +1,19 @@
 ﻿"""
-Ablation couplage sur dataset concentrique (anneaux alternÃ©s).
+Coupling ablation on a concentric alternating-rings dataset.
 
-Objectif: tester un cas oÃ¹ le contexte global doit aider la dÃ©cision locale.
-Compare:
+Objective: test a setting where global context should help local decisions.
+Compares:
 - Independent: alpha_bu=0.0, alpha_td=0.0
-- Coupled: alpha_bu=1.0, alpha_td=1.0
+- Coupled tuned: alpha_bu=0.5, alpha_td=1.5
 """
 
+import argparse
 import json
-import time
 import random
-import numpy as np
+import time
+
 import matplotlib.pyplot as plt
+import numpy as np
 import torch
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -32,10 +34,7 @@ def make_concentric_alternating(
     noise_xy=0.05,
     seed=42,
 ):
-    """
-    GÃ©nÃ¨re des anneaux concentriques avec classes alternÃ©es:
-    classe 0 sur anneaux 0,2 ; classe 1 sur anneaux 1,3.
-    """
+    """Generate concentric rings with alternating class labels."""
     rng = np.random.RandomState(seed)
     n_rings = len(radii)
     per_ring = n_samples // n_rings
@@ -125,6 +124,7 @@ def train_and_eval(
             verbose=True,
         )
         history = trainer.train(X_train, y_train)
+
     train_time = time.time() - start
     test_acc = model.score(X_test, y_test)
 
@@ -139,6 +139,20 @@ def train_and_eval(
         "train_accuracy_by_epoch": history["accuracy"],
         "test_accuracy": float(test_acc),
         "train_time_sec": float(train_time),
+    }
+
+
+def summarize_runs(runs):
+    test_accuracies = np.array([run["test_accuracy"] for run in runs], dtype=float)
+    train_times = np.array([run["train_time_sec"] for run in runs], dtype=float)
+    return {
+        "n_runs": int(len(runs)),
+        "test_accuracy_mean": float(test_accuracies.mean()),
+        "test_accuracy_std": float(test_accuracies.std(ddof=0)),
+        "test_accuracy_min": float(test_accuracies.min()),
+        "test_accuracy_max": float(test_accuracies.max()),
+        "train_time_sec_mean": float(train_times.mean()),
+        "train_time_sec_std": float(train_times.std(ddof=0)),
     }
 
 
@@ -159,94 +173,137 @@ def plot_decision(ax, model, X, y, title):
     ax.set_aspect("equal", adjustable="box")
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="Concentric coupling ablation.")
+    parser.add_argument("--n-runs", type=int, default=5, help="Number of seeds to run.")
+    parser.add_argument("--base-seed", type=int, default=42, help="Base seed for reproducibility.")
+    parser.add_argument("--n-samples", type=int, default=3200, help="Number of generated samples.")
+    parser.add_argument(
+        "--save-figure",
+        action="store_true",
+        help="Save decision boundaries for first run.",
+    )
+    parser.add_argument(
+        "--json-out",
+        type=str,
+        default="experiments/concentric_coupling_ablation_summary.json",
+        help="Output JSON summary path.",
+    )
+    return parser.parse_args()
+
+
 def main():
-    seed = 42
-    set_seed(seed)
+    args = parse_args()
+    seeds = [args.base_seed + i for i in range(args.n_runs)]
 
-    X, y = make_concentric_alternating(
-        n_samples=3200,
-        radii=(1.0, 2.0, 3.0, 4.0),
-        noise_r=0.12,
-        noise_xy=0.05,
-        seed=seed,
-    )
+    independent_runs = []
+    coupled_runs = []
+    figure_payload = None
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.25, random_state=seed, stratify=y
-    )
+    for run_index, seed in enumerate(seeds):
+        set_seed(seed)
+        X, y = make_concentric_alternating(
+            n_samples=args.n_samples,
+            radii=(1.0, 2.0, 3.0, 4.0),
+            noise_r=0.12,
+            noise_xy=0.05,
+            seed=seed,
+        )
 
-    scaler = StandardScaler()
-    X_train = scaler.fit_transform(X_train)
-    X_test = scaler.transform(X_test)
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.25, random_state=seed, stratify=y
+        )
 
-    # Baseline independent
-    model_ind, res_ind = train_and_eval(
-        "independent",
-        0.0,
-        0.0,
-        X_train,
-        y_train,
-        X_test,
-        y_test,
-        seed=seed,
-        n_attractors_per_class=3,
-        n_epochs=12,
-    )
+        scaler = StandardScaler()
+        X_train = scaler.fit_transform(X_train)
+        X_test = scaler.transform(X_test)
 
-    # Coupled tuned + defensive stability controls
-    model_cpl_tuned, res_cpl_tuned = train_and_eval(
-        "coupled_tuned_stable",
-        0.5,
-        1.5,
-        X_train,
-        y_train,
-        X_test,
-        y_test,
-        seed=seed,
-        n_attractors_per_class=5,
-        n_epochs=25,
-        max_steps=40,
-        phase1_epochs=5,
-        phase2_epochs=8,
-    )
+        model_ind, res_ind = train_and_eval(
+            "independent",
+            0.0,
+            0.0,
+            X_train,
+            y_train,
+            X_test,
+            y_test,
+            seed=seed,
+            n_attractors_per_class=3,
+            n_epochs=12,
+        )
 
-    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
-    plot_decision(
-        axes[0],
-        model_ind,
-        X_test,
-        y_test,
-        f"Independent (test={res_ind['test_accuracy']:.3f})",
-    )
-    plot_decision(
-        axes[1],
-        model_cpl_tuned,
-        X_test,
-        y_test,
-        f"Coupled tuned stable (test={res_cpl_tuned['test_accuracy']:.3f})",
-    )
-    plt.tight_layout()
-    out_png = "concentric_coupling_ablation.png"
-    fig.savefig(out_png, dpi=140)
+        model_cpl_tuned, res_cpl_tuned = train_and_eval(
+            "coupled_tuned_stable",
+            0.5,
+            1.5,
+            X_train,
+            y_train,
+            X_test,
+            y_test,
+            seed=seed,
+            n_attractors_per_class=5,
+            n_epochs=25,
+            max_steps=40,
+            phase1_epochs=5,
+            phase2_epochs=8,
+        )
+
+        independent_runs.append({"seed": seed, **res_ind})
+        coupled_runs.append({"seed": seed, **res_cpl_tuned})
+
+        if run_index == 0 and args.save_figure:
+            figure_payload = (model_ind, model_cpl_tuned, X_test, y_test, res_ind, res_cpl_tuned)
+
+    independent_stats = summarize_runs(independent_runs)
+    coupled_stats = summarize_runs(coupled_runs)
 
     summary = {
         "dataset": {
             "name": "concentric_alternating",
-            "train": int(len(X_train)),
-            "test": int(len(X_test)),
-            "seed": seed,
+            "n_samples": int(args.n_samples),
+            "train": int(args.n_samples * 0.75),
+            "test": int(args.n_samples * 0.25),
+            "seeds": seeds,
         },
-        "independent": res_ind,
-        "coupled_tuned": res_cpl_tuned,
-        "delta_test_accuracy_points_tuned_vs_independent":
-            (res_cpl_tuned["test_accuracy"] - res_ind["test_accuracy"]) * 100.0,
-        "delta_train_time_sec_tuned_vs_independent":
-            res_cpl_tuned["train_time_sec"] - res_ind["train_time_sec"],
-        "figure": out_png,
+        "independent_runs": independent_runs,
+        "coupled_tuned_runs": coupled_runs,
+        "independent_stats": independent_stats,
+        "coupled_tuned_stats": coupled_stats,
+        "delta_test_accuracy_points_mean": (
+            coupled_stats["test_accuracy_mean"] - independent_stats["test_accuracy_mean"]
+        ) * 100.0,
+        "delta_train_time_sec_mean": (
+            coupled_stats["train_time_sec_mean"] - independent_stats["train_time_sec_mean"]
+        ),
+        "figure": None,
     }
+
+    if figure_payload is not None:
+        model_ind, model_cpl_tuned, X_test, y_test, res_ind, res_cpl_tuned = figure_payload
+        fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+        plot_decision(
+            axes[0],
+            model_ind,
+            X_test,
+            y_test,
+            f"Independent (test={res_ind['test_accuracy']:.3f})",
+        )
+        plot_decision(
+            axes[1],
+            model_cpl_tuned,
+            X_test,
+            y_test,
+            f"Coupled tuned stable (test={res_cpl_tuned['test_accuracy']:.3f})",
+        )
+        plt.tight_layout()
+        out_png = "concentric_coupling_ablation.png"
+        fig.savefig(out_png, dpi=140)
+        summary["figure"] = out_png
+
+    with open(args.json_out, "w", encoding="utf-8") as f:
+        json.dump(summary, f, indent=2)
+
     print(json.dumps(summary, indent=2))
 
 
 if __name__ == "__main__":
     main()
-
