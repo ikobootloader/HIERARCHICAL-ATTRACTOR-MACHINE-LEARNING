@@ -356,7 +356,7 @@ Condition d'initialisation obligatoire (I1) :
 
 ### Version 0.2.2 (fix haute dimension)
 
-**ðŸ”§ CORRECTION CRITIQUE** : Saturation gaussienne en haute dimension
+**CORRECTION CRITIQUE** : Saturation gaussienne en haute dimension
 
 En dimension $d$, les distances concentrent autour de $\sqrt{d} \cdot \sigma_{data}$. Avec $\sigma_{kernel} \sim 1.0$ fixe, le kernel gaussien $\exp(-||x-\mu||^2 / 2\sigma^2)$ sature vers 0 dès que $d > 10-20$.
 
@@ -386,7 +386,7 @@ sigma = math.sqrt(self.dim) * data_std  # Au lieu de data_std seul
 - Stratégie 3 phases (indépendant → progressif → conjoint)
 - Backprop à travers trajectoires ODE
 - 5-30 epochs (1-5 min selon dataset)
-- Optimisation positions Î¼, portées Ïƒ/ρ, poids w
+- Optimisation positions μ, portées σ/ρ, poids w
 
 ### Version 0.2.0 (architecture sans entraînement)
 
