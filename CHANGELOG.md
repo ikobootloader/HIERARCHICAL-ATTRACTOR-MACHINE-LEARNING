@@ -19,6 +19,13 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
   - couplé level-aware: moyenne `70.80%`, std `5.54`, min `60.67%`
   - indépendant: moyenne `59.73%`, std `5.93`, min `51.67%`
   - seed `42` corrigé: delta couplé-vs-indépendant `-11.67 pts` -> `+0.67 pt`.
+- Formalisation théorique dans `README.md`:
+  - ajout de la proposition `P6` (détection de collapse niveau-aware en phase 3)
+  - condition de déclenchement et effet attendu explicités.
+- README complété sur la campagne concentrique :
+  - ajout d'un sous-test `B2` avec résultats multi-seeds consolidés (`n_runs=5`)
+  - chiffres documentés : indépendant `67.30% ± 4.37`, couplé `71.20% ± 6.43`, delta `+3.90 pts`
+  - lien explicite entre instabilité observée en `B2` et réponse méthodologique `E7/E8`.
 
 - Ajout d'un script de diagnostic seed-wise dédié `experiments/seedwise_coupling_diagnostics.py`:
   - export JSON par seed des traces `level_divergence`, `mu_sep`, `lr`, `level_accuracy`
@@ -286,7 +293,7 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 - Forces d'attraction actives sur tous niveaux hiérarchiques
 
 ### Leçon apprise
-Le scaling Ïƒ ∝ √d est **fondamental** pour noyaux gaussiens en haute dimension.
+Le scaling σ ∝ √d est **fondamental** pour noyaux gaussiens en haute dimension.
 Sans ce scaling, HAML ne peut PAS fonctionner au-delà de ~10-20 dimensions.
 
 ## [0.2.1] - 2025-05-10 (entraînement par gradient)
