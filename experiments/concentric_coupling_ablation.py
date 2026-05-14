@@ -88,38 +88,57 @@ def train_and_eval(
     if phase1_epochs is None or phase2_epochs is None:
         history = model.train_model(X_train, y_train)
     else:
-        from haml.training import HAMLLoss, ConstrainedOptimizer, HAMLTrainer
+        from haml.training import (
+            HAMLLoss,
+            ConstrainedOptimizer,
+            HAMLTrainer,
+            PhaseConfig,
+            StabilityConfig,
+            AdaptiveMuSepConfig,
+            SoftLandingConfig,
+            CollapseGuardConfig,
+        )
 
         optimizer = ConstrainedOptimizer(model.parameters(), lr=model.lr)
         trainer = HAMLTrainer(
             model=model,
             optimizer=optimizer,
             loss_fn=HAMLLoss(mu_sep=model.mu_sep, mu_dyn=model.mu_dyn),
-            n_epochs=n_epochs,
-            batch_size=model.batch_size,
-            phase1_epochs=phase1_epochs,
-            phase2_epochs=phase2_epochs,
-            td_warmup_power=2.0,
-            level_divergence_threshold=0.15,
-            divergence_patience=2,
-            lr_decay_on_divergence=0.5,
-            min_lr=1e-4,
-            early_stop_on_divergence=False,
-            adaptive_mu_sep=False,
-            adaptive_mu_sep_phase3_only=True,
-            mu_sep_trigger_divergence=0.11,
-            mu_sep_patience=2,
-            mu_sep_growth_factor=1.05,
-            mu_sep_max=1.0,
-            soft_landing_epoch=None,
-            soft_landing_trigger_divergence=None,
-            soft_landing_lr_factor=0.2,
-            soft_landing_freeze_mu=True,
-            collapse_guard_enabled=True,
-            collapse_guard_start_epoch=18,
-            collapse_guard_delta_div_threshold=0.10,
-            collapse_guard_mu_sep_boost=1.5,
-            collapse_guard_lr_factor=0.3,
+            phase_config=PhaseConfig(
+                n_epochs=n_epochs,
+                batch_size=model.batch_size,
+                phase1_epochs=phase1_epochs,
+                phase2_epochs=phase2_epochs,
+                td_warmup_power=2.0,
+            ),
+            stability_config=StabilityConfig(
+                level_divergence_threshold=0.15,
+                divergence_patience=2,
+                lr_decay_on_divergence=0.5,
+                min_lr=1e-4,
+                early_stop_on_divergence=False,
+            ),
+            adaptive_mu_sep_config=AdaptiveMuSepConfig(
+                enabled=False,
+                phase3_only=True,
+                trigger_divergence=0.11,
+                patience=2,
+                growth_factor=1.05,
+                max_value=1.0,
+            ),
+            soft_landing_config=SoftLandingConfig(
+                epoch=None,
+                trigger_divergence=None,
+                lr_factor=0.2,
+                freeze_mu=True,
+            ),
+            collapse_guard_config=CollapseGuardConfig(
+                enabled=True,
+                start_epoch=18,
+                delta_div_threshold=0.10,
+                mu_sep_boost=1.5,
+                lr_factor=0.3,
+            ),
             device=model.device,
             verbose=True,
         )
