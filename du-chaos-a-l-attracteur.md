@@ -42,7 +42,7 @@ Et c'est l'un des enseignements constants de ce genre de projets : les idées qu
 
 ### Pourquoi continuer, alors ?
 
-Parce que ce projet ne vise pas la publication dans Nature. Il vise quelque chose de plus modeste : comprendre en faisant, évaluer comment les IA raisonnent quand on leur soumet un problème ouvert, et transformer des abonnements sous-utilisés en apprentissages réels. Je me suis dit : j'ai deux abonnements, autant que ça serve à quelque chose — même si c'est un peu pour faire n'importe quoi !
+Parce que ce projet ne vise pas la publication dans Nature. Il vise quelque chose de plus modeste : comprendre en faisant, évaluer comment les IA raisonnent quand on leur soumet un problème ouvert, et transformer des abonnements sous-utilisés en apprentissages réels. Je me suis dit : j'ai deux abonnements, autant que ça serve à quelque chose, même si c'est un peu pour faire n'importe quoi !
 
 Le projet continue. Les runs reprennent. Et si les résultats sont médiocres, au moins la question posée était belle.
 
