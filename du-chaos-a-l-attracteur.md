@@ -1,10 +1,4 @@
----
-
 ## HAML : quand la physique des attracteurs réinvente l'apprentissage automatique
-
-*Une expérience de pensée à la frontière des systèmes dynamiques et du machine learning — et ce qu'elle m'a appris en chemin.*
-
----
 
 Tout a commencé avec un livre. *Le chaos, la complexité et l'émergence de la vie*, de John Gribbin — un de ces ouvrages qu'on relit plusieurs fois non par obligation, mais parce que chaque lecture en extrait quelque chose de nouveau. La dernière fois que je l'ai parcouru, une idée m'a traversé avec cette clarté particulière qui précède parfois les projets qu'on n'avait pas prévu de lancer.
 
