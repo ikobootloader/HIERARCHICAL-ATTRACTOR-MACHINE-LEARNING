@@ -92,9 +92,24 @@ $$E^{(l)}(\vec{x}) = -\sum_{c,m} w^{(l)}_{c,m} \exp\left(-\frac{\|\vec{x} - \vec
 
 $$\mathcal{L} = \mathcal{L}_{CE} + \mu_1 \mathcal{L}_{sep} + \mu_2 \mathcal{L}_{dyn}$$
 
-## Résultats
+## Résultats et campagnes de test
 
-### Mise à jour MNIST (subset 1500/500, 5 epochs)
+Pour améliorer la lisibilité, les résultats sont segmentés par campagnes de tests reproductibles.
+
+### Index rapide des campagnes
+
+| Campagne | Objectif principal | Script(s) | Indicateur clé |
+|---|---|---|---|
+| A (MNIST) | Mesurer le gain d'entraînement gradient sur protocole court | `experiments/mnist_coupling_ablation.py` | `+30.2 pts` (sans entraînement -> entraîné) |
+| B (Concentrique) | Tester l'apport du couplage sur topologie non convexe | `experiments/concentric_coupling_ablation.py` | Delta couplé vs indép. (multi-seeds) |
+| C (Bruité) | Évaluer robustesse au bruit (`make_moons`) | `experiments/noisy_benchmark.py` | Courbe du delta couplé-vs-indép. selon bruit |
+| D (SA-nODE-reimpl) | Comparaison architecturale contrôlée hiérarchie vs plat | `experiments/noisy_sanode_comparison.py`, `experiments/tune_sanode_reimpl.py` | Accuracy HAML couplé vs SA-nODE-reimpl |
+| E (Stabilisation) | Stabiliser les gains couplés forts sur concentrique | `experiments/concentric_coupling_ablation.py` | Compromis perf/stabilité (`E1` -> `E6`) |
+
+### Campagne A - MNIST subset (1500/500, 5 epochs)
+
+Objectif :
+- Vérifier le gain apporté par l'entraînement gradient sur un protocole court.
 
 Configuration du test :
 - Train/Test : `1500 / 500` échantillons
@@ -116,7 +131,7 @@ Diagnostics désormais disponibles :
 - `accuracy` par niveau hiérarchique à chaque epoch (log d'entraînement)
 - distribution des forces `||F||` par niveau (`mean/std/p10/p50/p90`) via `model.diagnostics(X, y)`
 
-Ablation couplage MNIST (1500/500, 5 epochs, seed fixe) :
+Sous-test A1 - Ablation couplage MNIST (seed fixe) :
 - Indépendant (`alpha_bu=0`, `alpha_td=0`) : `75.8%` test
 - Couplé (`alpha_bu=1`, `alpha_td=1`) : `75.8%` test
 - Delta couplage : `+0.0 point` sur ce protocole court
@@ -124,10 +139,17 @@ Ablation couplage MNIST (1500/500, 5 epochs, seed fixe) :
 Commande de reproduction :
 - `python experiments/mnist_coupling_ablation.py`
 
-Ablation couplage sur anneaux concentriques alternes :
+### Campagne B - Ablation couplage sur anneaux concentriques alternes
+
+Objectif :
+- Tester un cas structurel où le contexte global (top-down) doit aider la décision locale.
+
+Protocole :
 - Protocole principal : multi-seeds (`n_runs=5` par defaut) avec aggregation statistique.
 - Sortie standard : `experiments/concentric_coupling_ablation_summary.json`
 - Figure optionnelle : `concentric_coupling_ablation.png` (premier run uniquement, via flag)
+
+Résultats observés (run court `n_runs=2`, seeds `42,43`) :
 - Résultat multi-seeds observé (run court `n_runs=2`, seeds `42,43`) :
   - indépendant : `66.19% ± 3.69`
   - couplé tuned : `79.19% ± 5.69`
@@ -143,7 +165,12 @@ Commande de reproduction :
 - `python experiments/concentric_coupling_ablation.py`
 - `python experiments/concentric_coupling_ablation.py --n-runs 5 --save-figure`
 
-Benchmark données bruitées `make_moons` (seed `42`, `n_samples=3000`) :
+### Campagne C - Benchmark bruité `make_moons` (seed `42`, `n_samples=3000`)
+
+Objectif :
+- Évaluer la robustesse au bruit et le gain couplé vs indépendant.
+
+Résultats :
 - Bruit `0.10` :
   - HAML indépendant: `99.60%`
   - HAML couplé: `99.60%`
@@ -202,7 +229,12 @@ Synthèse théorie/expérience (état actuel) :
 Point restant pour le positionnement publication :
 - Ajouter un benchmark comparatif direct avec SA-nODE sur protocole bruité comparable (même split, même seed, mêmes métriques).
 
-Comparaison additionnelle HAML vs SA-nODE-reimpl (même protocole bruité, seed `42`) :
+### Campagne D - Comparaison HAML vs SA-nODE-reimpl (même protocole bruité)
+
+Objectif :
+- Isoler l'effet architectural de la hiérarchie bidirectionnelle vs modèle plat.
+
+Comparaison additionnelle HAML vs SA-nODE-reimpl (seed `42`) :
 - Note méthode :
   - baseline `SA-nODE-reimpl` = espace unique + attracteurs binaires plantés ±a + potentiel double-puits analytique + couplage linéaire entraîné
   - réimplémentation interne inspirée de la publication (pas un code officiel auteur)
@@ -236,7 +268,12 @@ Commande de reproduction :
 - `python experiments/noisy_sanode_comparison.py`
 - `python experiments/tune_sanode_reimpl.py`
 
-Variante couplée renforcée (même script) :
+### Campagne E - Itérations de stabilisation (protocole concentrique)
+
+Objectif :
+- Stabiliser les gains du couplage fort en limitant les collapses inter-niveaux tardifs.
+
+Sous-test E1 - Variante couplée renforcée :
 - `alpha_bu=0.5`, `alpha_td=1.5`, `M=5`, `25` epochs, phases `(5,8,12)`
 - Accuracy test : `86.38%`
 - Gain vs indépendant (`70.75%`) : `+15.63 points`
@@ -247,7 +284,7 @@ Note de stabilité :
   (fluctuation forte de certaines `level_acc`). Un réglage de schedule/regularisation est
   recommandé avant généralisation.
 
-Variante couplée renforcée stabilisée (early-stop + LR decay sur divergence) :
+Sous-test E2 - Variante couplée renforcée stabilisée (early-stop + LR decay) :
 - mêmes hyperparamètres de base (`alpha_bu=0.5`, `alpha_td=1.5`, `M=5`)
 - garde-fous: seuil divergence inter-niveaux `0.15`, patience `2`,
   réduction LR `x0.5`, `min_lr=1e-4`
@@ -256,7 +293,7 @@ Variante couplée renforcée stabilisée (early-stop + LR decay sur divergence) 
 - Observation clé: la divergence apparaît tard (epoch `23`, fin de phase 3),
   puis déclenche réduction du LR et early-stop (epoch `24`).
 
-Itération "mu_sep adaptatif + soft landing préventif" :
+Sous-test E3 - Itération "mu_sep adaptatif + soft landing préventif" :
 - ajout de `mu_sep` adaptatif (croissance dès `level_div > 0.05`)
 - soft landing à epoch `20` (LR `x0.1` + gel des `mu`)
 - résultat sur protocole concentrique actuel :
@@ -268,7 +305,7 @@ Lecture :
 - la stabilité inter-niveaux est mieux contenue en fin de run,
   mais la régularisation actuelle est trop agressive et dégrade la performance.
 
-Itération "soft-landing sur divergence + mu_sep adaptatif tardif (phase 3)" :
+Sous-test E4 - Itération "soft-landing sur divergence + mu_sep adaptatif tardif (phase 3)" :
 - soft-landing déclenché sur `level_div` (au lieu d'un epoch fixe)
 - `mu_sep` adaptatif activé uniquement en phase 3, croissance douce (`x1.05`) et plafond (`0.35`)
 - résultat sur protocole concentrique actuel :
@@ -280,7 +317,7 @@ Lecture :
 - ce réglage rétablit un gain couplé positif avec stabilité tardive,
 - mais reste en dessous du pic instable (`86.38%`) et du stabilisé précédent (`82.88%`).
 
-Itération "trigger mu_sep relevé + patience 2 epochs" :
+Sous-test E5 - Itération "trigger mu_sep relevé + patience 2 epochs" :
 - `mu_sep_trigger_divergence=0.11` (au lieu de `0.08`)
 - `mu_sep_patience=2` (hausse de `mu_sep` seulement après 2 epochs consécutives au-dessus du seuil)
 - résultat sur protocole concentrique actuel :
@@ -292,7 +329,7 @@ Lecture :
 - le cooldown évite les réactions à des fluctuations isolées,
 - mais la performance reste encore trop bridée pour atteindre la zone `82-86%`.
 
-Itération "collapse guard sur saut de divergence" :
+Sous-test E6 - Itération "collapse guard sur saut de divergence" :
 - détection d'un saut brutal `delta_div` (au lieu d'un simple seuil absolu)
 - activé uniquement à partir de l'epoch `18`
 - règle appliquée au trigger :
