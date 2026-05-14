@@ -1,9 +1,9 @@
-"""
+﻿"""
 Module Trainer.
 
-Orchestration de l'entraînement HAML avec :
-- Backprop à travers trajectoires ODE
-- Stratégie de couplage progressif (3 phases)
+Orchestration de l'entraÃ®nement HAML avec :
+- Backprop Ã  travers trajectoires ODE
+- StratÃ©gie de couplage progressif (3 phases)
 - Monitoring de convergence
 """
 
@@ -23,12 +23,12 @@ from .config import (
 
 class HAMLTrainer:
     """
-    Entraîneur HAML avec backprop à travers trajectoires ODE.
+    EntraÃ®neur HAML avec backprop Ã  travers trajectoires ODE.
 
-    Stratégie 3 phases :
-    - Phase 1 : Niveaux indépendants (α=0), stabilise attracteurs
+    StratÃ©gie 3 phases :
+    - Phase 1 : Niveaux indÃ©pendants (Î±=0), stabilise attracteurs
     - Phase 2 : Couplage progressif, synchronise niveaux
-    - Phase 3 : Entraînement conjoint tous paramètres
+    - Phase 3 : EntraÃ®nement conjoint tous paramÃ¨tres
     """
 
     def __init__(
@@ -47,11 +47,11 @@ class HAMLTrainer:
     ):
         """
         Args:
-            model (HAML): Modèle HAML
+            model (HAML): ModÃ¨le HAML
             optimizer (ConstrainedOptimizer): Optimiseur avec contraintes
             loss_fn (HAMLLoss): Fonction de loss
             phase_config (PhaseConfig|None): Configuration de phases
-            stability_config (StabilityConfig|None): Configuration de stabilité
+            stability_config (StabilityConfig|None): Configuration de stabilitÃ©
             adaptive_mu_sep_config (AdaptiveMuSepConfig|None): Configuration mu_sep adaptatif
             soft_landing_config (SoftLandingConfig|None): Configuration soft landing
             collapse_guard_config (CollapseGuardConfig|None): Configuration collapse guard
@@ -82,7 +82,8 @@ class HAMLTrainer:
             'level_accuracy': [],
             'level_divergence': [],
             'lr': [],
-            'mu_sep': []
+            'mu_sep': [],
+            'level_attractor_diagnostics': [],
         }
 
         # Sauvegarde des alphas originaux
@@ -91,18 +92,18 @@ class HAMLTrainer:
 
     def train(self, X_train, y_train, X_val=None, y_val=None):
         """
-        Entraîne le modèle avec stratégie 3 phases.
+        EntraÃ®ne le modÃ¨le avec stratÃ©gie 3 phases.
 
         Args:
-            X_train (np.ndarray): Données d'entraînement
-            y_train (np.ndarray): Labels d'entraînement
-            X_val (np.ndarray, optional): Données de validation
+            X_train (np.ndarray): DonnÃ©es d'entraÃ®nement
+            y_train (np.ndarray): Labels d'entraÃ®nement
+            X_val (np.ndarray, optional): DonnÃ©es de validation
             y_val (np.ndarray, optional): Labels de validation
 
         Returns:
-            dict: Historique d'entraînement
+            dict: Historique d'entraÃ®nement
         """
-        # Normalisation déjà faite dans fit()
+        # Normalisation dÃ©jÃ  faite dans fit()
         X_train_t = torch.from_numpy(X_train).float().to(self.device)
         y_train_t = torch.from_numpy(y_train).long().to(self.device)
 
@@ -126,18 +127,19 @@ class HAMLTrainer:
             )
             print("="*70 + "\n")
 
-        # Entraînement
+        # EntraÃ®nement
         divergence_streak = 0
         lr_decay_events = 0
         last_lr_decay_epoch = -10**9
         mu_sep_streak = 0
         level_recovery_streak = [0 for _ in range(len(self.model.levels))]
         level_recovery_triggers = 0
+        level_recovery_td_cooldown = 0
         soft_landing_applied = False
         collapse_guard_applied = False
         prev_level_div = None
         for epoch in range(self.phase_config.n_epochs):
-            # Détermination de la phase
+            # DÃ©termination de la phase
             if epoch < self.phase_config.phase1_epochs:
                 phase = 1
                 self._set_coupling_phase1()
@@ -147,7 +149,11 @@ class HAMLTrainer:
                 self._set_coupling_phase2(progress)
             else:
                 phase = 3
-                self._set_coupling_phase3()
+                if level_recovery_td_cooldown > 0:
+                    self._set_coupling_phase3(td_scale=self.level_recovery_config.td_scale_during_cooldown)
+                    level_recovery_td_cooldown -= 1
+                else:
+                    self._set_coupling_phase3()
 
             # Epoch
             epoch_loss = 0.0
@@ -174,7 +180,7 @@ class HAMLTrainer:
                 # Forward
                 self.optimizer.zero_grad()
 
-                # Intégration ODE avec trajectoire
+                # IntÃ©gration ODE avec trajectoire
                 initial_states = self.model.spaces(X_batch)
                 final_states, _, _, trajectory = self.model.integrator.integrate(
                     initial_states, return_trajectory=True
@@ -240,6 +246,9 @@ class HAMLTrainer:
             self.history['level_divergence'].append(level_div)
             self.history['lr'].append(self.optimizer.get_lr())
             self.history['mu_sep'].append(self.loss_fn.mu_sep)
+            self.history['level_attractor_diagnostics'].append(
+                self._compute_level_attractor_diagnostics()
+            )
 
             if (
                 self.collapse_guard_config.enabled
@@ -295,13 +304,21 @@ class HAMLTrainer:
                 self.level_recovery_config.enabled
                 and phase == 3
                 and level_recovery_triggers < self.level_recovery_config.max_triggers
-                and level_div >= self.level_recovery_config.require_divergence
-                and accuracy <= self.level_recovery_config.max_train_accuracy_to_trigger
             ):
+                # Keep streak accumulation independent from global gating conditions.
+                # This tracks true "stuck near chance" duration, then gate only triggering.
                 stuck_level_idx = self._detect_stuck_level(level_accuracy, level_recovery_streak)
-                if stuck_level_idx is not None:
+                if (
+                    stuck_level_idx is not None
+                    and level_div >= self.level_recovery_config.require_divergence
+                    and accuracy <= self.level_recovery_config.max_train_accuracy_to_trigger
+                ):
                     self._apply_level_recovery(stuck_level_idx, X_train_t, y_train_t)
                     level_recovery_triggers += 1
+                    level_recovery_td_cooldown = max(
+                        0,
+                        int(self.level_recovery_config.td_cooldown_epochs),
+                    )
 
                     new_mu_sep = min(
                         self.adaptive_mu_sep_config.max_value,
@@ -320,10 +337,11 @@ class HAMLTrainer:
                         print(
                             f"[level-recovery] epoch={epoch+1}, level={stuck_level_idx}, "
                             f"level_acc={level_accuracy[stuck_level_idx]:.3f}, "
-                            f"mu_sep -> {self.loss_fn.mu_sep:.4f}, lr -> {new_lr:.6f}"
+                            f"mu_sep -> {self.loss_fn.mu_sep:.4f}, lr -> {new_lr:.6f}, "
+                            f"td_cooldown={level_recovery_td_cooldown}"
                         )
 
-            # Soft landing: mode préventif (epoch) ou réactif (divergence), une seule fois.
+            # Soft landing: mode prÃ©ventif (epoch) ou rÃ©actif (divergence), une seule fois.
             soft_landing_by_epoch = (
                 self.soft_landing_config.epoch is not None and (epoch + 1) >= self.soft_landing_config.epoch
             )
@@ -401,14 +419,14 @@ class HAMLTrainer:
         return self.history
 
     def _set_coupling_phase1(self):
-        """Phase 1 : Niveaux indépendants (α_bu = α_td = 0)."""
+        """Phase 1 : Niveaux indÃ©pendants (Î±_bu = Î±_td = 0)."""
         with torch.no_grad():
             self.model.coupling.log_alpha_bu.fill_(torch.log(torch.tensor(1e-6)))
             self.model.coupling.log_alpha_td.fill_(torch.log(torch.tensor(1e-6)))
 
     def _set_coupling_phase2(self, progress):
         """
-        Phase 2 : Couplage progressif (α croît linéairement).
+        Phase 2 : Couplage progressif (Î± croÃ®t linÃ©airement).
 
         Args:
             progress (float): Progression 0->1
@@ -420,14 +438,15 @@ class HAMLTrainer:
             self.model.coupling.log_alpha_bu.fill_(torch.log(torch.tensor(alpha_bu + 1e-6)))
             self.model.coupling.log_alpha_td.fill_(torch.log(torch.tensor(alpha_td + 1e-6)))
 
-    def _set_coupling_phase3(self):
-        """Phase 3 : Couplage complet (α = valeur cible)."""
+    def _set_coupling_phase3(self, td_scale=1.0):
+        """Phase 3 : Couplage complet (Î± = valeur cible)."""
         with torch.no_grad():
             self.model.coupling.log_alpha_bu.fill_(torch.log(torch.tensor(self.alpha_bu_target)))
-            self.model.coupling.log_alpha_td.fill_(torch.log(torch.tensor(self.alpha_td_target)))
+            td_value = max(1e-6, float(self.alpha_td_target * td_scale))
+            self.model.coupling.log_alpha_td.fill_(torch.log(torch.tensor(td_value)))
 
     def _freeze_mu_positions(self):
-        """Gèle les positions des attracteurs (mu) pour limiter la dérive tardive."""
+        """GÃ¨le les positions des attracteurs (mu) pour limiter la dÃ©rive tardive."""
         for level in self.model.levels:
             for c in range(level.n_classes):
                 for attractor in level.attractors[str(c)]:
@@ -437,7 +456,11 @@ class HAMLTrainer:
         """Detecte un niveau bloque proche du hasard en phase 3."""
         stuck_level_idx = None
         lowest_acc = 1.0
+        target_idx = self.level_recovery_config.target_level_idx
         for idx, (level, acc) in enumerate(zip(self.model.levels, level_accuracy)):
+            if target_idx is not None and idx != target_idx:
+                level_recovery_streak[idx] = 0
+                continue
             chance = 1.0 / float(level.n_classes)
             if abs(acc - chance) <= self.level_recovery_config.chance_tolerance:
                 level_recovery_streak[idx] += 1
@@ -449,23 +472,78 @@ class HAMLTrainer:
         return stuck_level_idx
 
     def _apply_level_recovery(self, level_idx, X_train_t, y_train_t):
-        """De-collapse localement les attracteurs d'un niveau bloque."""
+        """Re-anchor localement un niveau bloque sur des prototypes supervises."""
         level = self.model.levels[level_idx]
         with torch.no_grad():
+            level_states = self.model.spaces(X_train_t)[level_idx]
             for class_idx in range(level.n_classes):
                 class_attractors = level.attractors[str(class_idx)]
                 if len(class_attractors) == 0:
                     continue
-                positions = torch.stack([a.position for a in class_attractors], dim=0)
-                center = torch.mean(positions, dim=0)
+                class_mask = (y_train_t == class_idx)
+                if torch.sum(class_mask).item() == 0:
+                    continue
+                class_points = level_states[class_mask]
+                class_center = torch.mean(class_points, dim=0)
+                class_std = torch.std(class_points, dim=0, unbiased=False)
+                radial_scale = max(float(torch.mean(class_std).item()), self.level_recovery_config.jitter_std)
                 for attractor in class_attractors:
-                    old_pos = attractor.position.detach().clone()
-                    jitter = self.level_recovery_config.jitter_std * torch.randn_like(center)
-                    target = center + jitter
-                    attractor.position.copy_(0.8 * old_pos + 0.2 * target)
+                    jitter = radial_scale * torch.randn_like(class_center)
+                    target = class_center + jitter
+                    old_pos = attractor.position.detach()
+                    attractor.position.copy_(0.7 * old_pos + 0.3 * target)
+
+    def _compute_level_attractor_diagnostics(self):
+        """Compute per-level collapse/separation metrics from current attractors."""
+        diagnostics = []
+        for level_idx, level in enumerate(self.model.levels):
+            class_centroids = []
+            intra_spreads = []
+            for class_idx in range(level.n_classes):
+                class_attractors = level.attractors[str(class_idx)]
+                if len(class_attractors) == 0:
+                    continue
+                positions = torch.stack([a.position.detach() for a in class_attractors], dim=0)
+                centroid = torch.mean(positions, dim=0)
+                spread = torch.sqrt(torch.mean(torch.sum((positions - centroid) ** 2, dim=1)))
+                class_centroids.append(centroid)
+                intra_spreads.append(spread)
+
+            if len(class_centroids) >= 2:
+                centroids = torch.stack(class_centroids, dim=0)
+                centroid_dists = torch.cdist(centroids, centroids, p=2)
+                eye = torch.eye(centroid_dists.shape[0], device=centroid_dists.device, dtype=torch.bool)
+                inter_vals = centroid_dists[~eye]
+                inter_min = float(torch.min(inter_vals).item())
+                inter_mean = float(torch.mean(inter_vals).item())
+            else:
+                inter_min = 0.0
+                inter_mean = 0.0
+
+            if len(intra_spreads) > 0:
+                intra = torch.stack(intra_spreads)
+                intra_mean = float(torch.mean(intra).item())
+                intra_max = float(torch.max(intra).item())
+                intra_min = float(torch.min(intra).item())
+            else:
+                intra_mean = 0.0
+                intra_max = 0.0
+                intra_min = 0.0
+
+            separation_ratio = inter_min / (intra_mean + 1e-8) if intra_mean > 0 else 0.0
+            diagnostics.append({
+                'level_idx': int(level_idx),
+                'intra_spread_mean': float(intra_mean),
+                'intra_spread_min': float(intra_min),
+                'intra_spread_max': float(intra_max),
+                'inter_centroid_dist_min': float(inter_min),
+                'inter_centroid_dist_mean': float(inter_mean),
+                'separation_ratio': float(separation_ratio),
+            })
+        return diagnostics
 
     def plot_history(self):
-        """Visualise l'historique d'entraînement."""
+        """Visualise l'historique d'entraÃ®nement."""
         import matplotlib.pyplot as plt
 
         fig, axes = plt.subplots(2, 2, figsize=(14, 10))
@@ -511,3 +589,4 @@ class HAMLTrainer:
 
         plt.tight_layout()
         return fig
+

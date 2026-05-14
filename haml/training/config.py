@@ -69,3 +69,6 @@ class LevelRecoveryConfig:
     mu_sep_boost: float = 1.2
     lr_factor: float = 0.8
     jitter_std: float = 0.05
+    td_cooldown_epochs: int = 1
+    td_scale_during_cooldown: float = 0.7
+    target_level_idx: Optional[int] = None
