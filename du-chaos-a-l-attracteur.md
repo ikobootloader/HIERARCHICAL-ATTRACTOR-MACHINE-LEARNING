@@ -2,7 +2,7 @@
 
 Tout a commencé avec un livre. *Le chaos, la complexité et l'émergence de la vie*, de John Gribbin — un de ces ouvrages qu'on relit plusieurs fois non par obligation, mais parce que chaque lecture en extrait quelque chose de nouveau. La dernière fois que je l'ai parcouru, une idée m'a traversé avec cette clarté particulière qui précède parfois les projets qu'on n'avait pas prévu de lancer.
 
-Et si les bassins d'attraction — ces régions de l'espace vers lesquelles convergent spontanément les systèmes dynamiques — pouvaient servir de structure fondamentale à un modèle d'apprentissage automatique ?
+Et si les bassins d'attraction — ces régions de l'espace vers lesquelles convergent spontanément les systèmes dynamiques — pouvaient servir de structure fondamentale à un modèle d'apprentissage automatique ? J’ai à ce point extrapolé cette idée que j’en suis venu à me dire que l’univers tout entier était un modèle d’apprentissage !
 
 ### La thèse, en clair
 
