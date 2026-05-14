@@ -7,6 +7,18 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 ## [Non publié]
 
 ### Modifié - 2026-05-14
+- Campagne seed-wise `coupled_tuned` étendue à `n_samples=3200` (seeds `42..46`) :
+  - résultat global: `78.75% ± 7.63`, min `68.25%`, max `87.38%`
+  - gain net vs E8 (`n_samples=1200`): moyenne `+7.95 pts`, min `+7.58 pts`
+  - variance inter-seeds en hausse (`std +2.09`).
+- Diagnostic des seeds extrêmes (`n_samples=3200`) :
+  - seed `42` (`87.38%`) : aucun déclenchement recovery L1; run fort sans garde-fou level-recovery
+  - seed `45` (`68.25%`) : aucun déclenchement recovery L1; niveau `L2` proche hasard en phase 3
+  - implication: le recovery calibré sur `n_samples=1200` n'est pas le levier principal des runs faibles à `n_samples=3200`.
+- Test ciblé de généralisation multi-niveaux (`target_level_idx=None`) sur `n_samples=3200` :
+  - seeds `42,43`: `85.75%`, `81.75%` (aucun déclenchement `level-recovery` observé)
+  - seed `45`: `67.88%` (aucun déclenchement `level-recovery` observé)
+  - conclusion: retirer la restriction L1 ne suffit pas; le gating de déclenchement reste le facteur bloquant.
 - Recovery level-aware: correction de design du streak dans `haml/training/trainer.py` :
   - le streak de blocage niveau est désormais accumulé indépendamment des gates globales (`divergence`, `train_accuracy`)
   - les gates globales contrôlent uniquement le déclenchement effectif du recovery

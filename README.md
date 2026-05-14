@@ -119,7 +119,7 @@ Pour améliorer la lisibilité, les résultats sont segmentés par campagnes de 
 | B (Concentrique) | Tester l'apport du couplage sur topologie non convexe | `experiments/concentric_coupling_ablation.py` | Delta couplé vs indép. (multi-seeds) |
 | C (Bruité) | Évaluer robustesse au bruit (`make_moons`) | `experiments/noisy_benchmark.py` | Courbe du delta couplé-vs-indép. selon bruit |
 | D (SA-nODE-reimpl) | Comparaison architecturale contrôlée hiérarchie vs plat | `experiments/noisy_sanode_comparison.py`, `experiments/tune_sanode_reimpl.py` | Accuracy HAML couplé vs SA-nODE-reimpl |
-| E (Stabilisation) | Stabiliser les gains couplés forts sur concentrique | `experiments/concentric_coupling_ablation.py`, `experiments/seedwise_coupling_diagnostics.py` | E8 (level-aware): `70.80% ± 5.54`, delta `+11.07 pts` |
+| E (Stabilisation) | Stabiliser les gains couplés forts sur concentrique | `experiments/concentric_coupling_ablation.py`, `experiments/seedwise_coupling_diagnostics.py` | E10 (`n_samples=3200`): `78.75% ± 7.63`, min `68.25%` |
 
 ### Campagne A - MNIST subset (1500/500, 5 epochs)
 
@@ -421,6 +421,30 @@ Sous-test E9 - Patch cause-oriented (déblocage L1 en phase 3) :
 - contrôle seed `42` (run unitaire post-patch) :
   - `L1` se débloque immédiatement après recovery (`0.500 -> 0.602 -> 0.644`)
   - test run observé : `65.0%` (amélioration mécanique confirmée, calibration perf encore à stabiliser)
+
+Sous-test E10 - Test d'échelle (protocole inchangé, `n_samples=3200`) :
+- objectif: trancher "plafond du modèle" vs "plafond du protocole court (`n_samples=1200`)"
+- protocole: seeds `42..46`, mêmes hyperparamètres que E9 (streak ungated, recovery ciblé L1)
+- résultats:
+  - couplé: `78.75% ± 7.63`, min `68.25%`, max `87.38%`
+  - comparaison E8 (`n_samples=1200`): moyenne `+7.95 pts`, min `+7.58 pts`, variance plus large (`+2.09` de std)
+- lecture seed-wise extrêmes:
+  - seed `42` (`87.38%`): pas de déclenchement recovery L1; run naturellement fort, puis divergence tardive de `L0` en fin de phase 3
+  - seed `45` (`68.25%`): pas de déclenchement recovery L1; `L2` reste proche hasard (`~0.51`) et devient le facteur limitant
+- conclusion:
+  - le plafond `70-71%` observé sur `n_samples=1200` venait du protocole court
+  - la variance inter-seeds reste le verrou principal à `n_samples=3200`.
+
+Sous-test E10b - Recovery multi-niveaux dynamique (`target_level_idx=None`) :
+- objectif: vérifier si la généralisation "tout niveau bloqué" permet de débloquer les runs faibles (`n_samples=3200`) sans régression sur les runs forts
+- changement minimal: retrait de la restriction `target_level_idx=1` dans `experiments/seedwise_coupling_diagnostics.py`
+- validation ciblée:
+  - seed `42`: `85.75%` (vs `87.38%` avant), aucun déclenchement `level-recovery` observé
+  - seed `43`: `81.75%` (vs `86.50%` avant), aucun déclenchement `level-recovery` observé
+  - seed `45`: `67.88%` (vs `68.25%` avant), aucun déclenchement `level-recovery` observé
+- conclusion:
+  - la détection dynamique ne suffit pas seule: le recovery ne s'active pas sur ces runs
+  - le verrou n'est pas la restriction L1 mais les conditions de déclenchement sur ce protocole `n_samples=3200`.
 
 Condition d'initialisation obligatoire (I1) :
 - Pour éviter la dégénérescence en haute dimension, imposer
