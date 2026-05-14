@@ -88,6 +88,21 @@ $$E^{(l)}(\vec{x}) = -\sum_{c,m} w^{(l)}_{c,m} \exp\left(-\frac{\|\vec{x} - \vec
 **C2** - Couplage suffisant : $\alpha_{bu} + \alpha_{td} > \alpha_{min}$
 **C3** - Séparation des bassins : garantie par $\mathcal{L}_{sep}$
 
+### Proposition P6 - Récupération niveau-aware en phase 3
+
+Quand un niveau reste proche du hasard alors que le couplage est actif (phase 3), on considère un collapse local de représentation.
+
+Condition de déclenchement (forme opérationnelle) :
+- phase courante = 3
+- divergence inter-niveaux $\Delta_l = \max(\text{acc}_l)-\min(\text{acc}_l)$ au-dessus d'un seuil
+- existence d'un niveau $l^\*$ tel que $|\text{acc}_{l^\*} - 1/K| \le \varepsilon$ pendant `patience` epochs
+- accuracy train globale encore modérée (filtre anti faux positifs sur runs déjà sains)
+
+Effet attendu :
+- casser le collapse local (de-collapse attracteurs du niveau bloqué),
+- réduire la probabilité de run dégradé,
+- améliorer la borne basse inter-seeds sans sacrifier le gain moyen du couplage.
+
 ### Loss d'entraînement
 
 $$\mathcal{L} = \mathcal{L}_{CE} + \mu_1 \mathcal{L}_{sep} + \mu_2 \mathcal{L}_{dyn}$$
@@ -104,7 +119,7 @@ Pour améliorer la lisibilité, les résultats sont segmentés par campagnes de 
 | B (Concentrique) | Tester l'apport du couplage sur topologie non convexe | `experiments/concentric_coupling_ablation.py` | Delta couplé vs indép. (multi-seeds) |
 | C (Bruité) | Évaluer robustesse au bruit (`make_moons`) | `experiments/noisy_benchmark.py` | Courbe du delta couplé-vs-indép. selon bruit |
 | D (SA-nODE-reimpl) | Comparaison architecturale contrôlée hiérarchie vs plat | `experiments/noisy_sanode_comparison.py`, `experiments/tune_sanode_reimpl.py` | Accuracy HAML couplé vs SA-nODE-reimpl |
-| E (Stabilisation) | Stabiliser les gains couplés forts sur concentrique | `experiments/concentric_coupling_ablation.py` | Compromis perf/stabilité (`E1` -> `E6`) |
+| E (Stabilisation) | Stabiliser les gains couplés forts sur concentrique | `experiments/concentric_coupling_ablation.py`, `experiments/seedwise_coupling_diagnostics.py` | E8 (level-aware): `70.80% ± 5.54`, delta `+11.07 pts` |
 
 ### Campagne A - MNIST subset (1500/500, 5 epochs)
 
@@ -154,6 +169,15 @@ Résultats observés (run court `n_runs=2`, seeds `42,43`) :
   - indépendant : `66.19% ± 3.69`
   - couplé tuned : `79.19% ± 5.69`
   - delta moyen : `+13.00 points`
+
+Sous-test B2 - Résultats multi-seeds consolidés (`n_runs=5`, seeds `42..46`) :
+- indépendant : `67.30% ± 4.37`
+- couplé tuned (baseline) : `71.20% ± 6.43`
+- delta moyen : `+3.90 points`
+- lecture :
+  - le gain couplé moyen reste positif mais non garanti run par run
+  - la variance du couplé est plus élevée que l'indépendant, ce qui motive un mécanisme anti-collapse
+  - ce constat est la motivation directe des itérations de stabilisation `E7`/`E8` (garde-fou level-aware)
 - Lecture qualitative (figure) :
   - indépendant : frontière majoritairement convexe, ne capture pas correctement la topologie annulaire.
   - couplé tuned : frontière non convexe alignée avec la géométrie en anneaux alternés.
