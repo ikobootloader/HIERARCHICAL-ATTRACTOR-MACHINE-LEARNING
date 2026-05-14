@@ -7,6 +7,40 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 ## [Non publié]
 
 ### Modifié - 2026-05-14
+- Ajout d'un garde-fou level-aware en entraînement (`haml/training/config.py`, `haml/training/trainer.py`) :
+  - nouveau `LevelRecoveryConfig` (stagnation near-chance en phase 3)
+  - déclenchement borné: phase 3 + divergence minimale + budget de déclenchement
+  - recovery locale douce des attracteurs du niveau bloqué (de-collapse ciblé).
+- Itération de robustification du trigger level-aware:
+  - ajout d'une condition `max_train_accuracy_to_trigger` pour éviter les faux positifs sur runs déjà sains
+  - garde-fou activé dans le protocole seed-wise `coupled_tuned` de `experiments/seedwise_coupling_diagnostics.py`.
+- Revalidation seed-wise (`42..46`, `n_samples=1200`) après garde-fou level-aware filtré :
+  - couplé baseline: moyenne `68.60%`, std `7.54`, min `56.67%`
+  - couplé level-aware: moyenne `70.80%`, std `5.54`, min `60.67%`
+  - indépendant: moyenne `59.73%`, std `5.93`, min `51.67%`
+  - seed `42` corrigé: delta couplé-vs-indépendant `-11.67 pts` -> `+0.67 pt`.
+
+- Ajout d'un script de diagnostic seed-wise dédié `experiments/seedwise_coupling_diagnostics.py`:
+  - export JSON par seed des traces `level_divergence`, `mu_sep`, `lr`, `level_accuracy`
+  - export des états attracteurs (sigma/rho/poids/positions)
+  - support des modes `independent` et `coupled_tuned`.
+- Diagnostic reproduit sur seeds `42..46` (`n_samples=1200`) :
+  - couplé avant patch: moyenne `68.60%`, écart-type `7.54`, min `56.67%`
+  - indépendant: moyenne `59.73%`, écart-type `5.93`, min `51.67%`
+  - confirmation d'une instabilité tardive (phase 3) avec décays LR en cascade et niveau bloqué proche hasard sur certains runs.
+- Stabilisation entraînement renforcée (`haml/training/config.py`, `haml/training/trainer.py`) :
+  - nouveaux paramètres `StabilityConfig`:
+    - `phase3_only`
+    - `lr_decay_cooldown_epochs`
+    - `max_lr_decay_events`
+  - logique trainer ajustée pour éviter la cascade de décays LR (cooldown + budget max).
+- Protocole `coupled_tuned` du diagnostic mis à jour:
+  - `adaptive_mu_sep` réactivé en phase 3 (croissance modérée)
+  - stabilité conservatrice bornée (cooldown + plafond d'événements).
+- Revalidation seed-wise après patch (même protocole seeds `42..46`, `n_samples=1200`) :
+  - couplé après patch: moyenne `69.33%`, écart-type `7.10`, min `57.33%`
+  - amélioration modérée de la queue basse, seed dégradé encore présent (seed `42`).
+
 - Refactor de l'orchestration d'entraînement avec configurations métier dédiées :
   - nouveau module `haml/training/config.py` avec
     `PhaseConfig`, `StabilityConfig`, `AdaptiveMuSepConfig`,
@@ -33,6 +67,16 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
   - application de `rho_sigma_ratio`
   - erreur explicite si une classe est absente à l'initialisation
   - injection des configs groupées dans `HAMLTrainer`.
+- README restructuré pour segmenter clairement les campagnes de tests :
+  - organisation en blocs `Campagne A..E` avec objectif/protocole/résultats/reproduction
+  - séparation explicite des sous-tests de stabilisation concentrique (`E1..E6`).
+- README enrichi avec un index rapide des campagnes :
+  - tableau synthétique `campagne -> objectif -> script(s) -> indicateur clé`
+  - navigation accélérée pour distinguer les protocoles de test.
+- Correction d'encodage dans `README.md` :
+  - suppression d'un artefact mojibake sur l'intitulé "CORRECTION CRITIQUE"
+  - restauration des symboles grecs `μ`, `σ`, `ρ` dans la section entraînement.
+  - correction de la ligne d'avertissement haute dimension (suppression de `⚠ï¸` corrompu).
 
 ### Modifie - 2026-05-13
 - Refactor du protocole `experiments/concentric_coupling_ablation.py` en ablation multi-seeds configurable.

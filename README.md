@@ -349,6 +349,37 @@ Interprétation :
 - Le couplage progressif apporte un gain supplémentaire après la phase indépendante.
 - Le principal verrou actuel est le temps d'entraînement (~1786s pour 5 epochs), ce qui motive la priorisation d'une méthode adjointe.
 
+Sous-test E7 - Diagnostic seed-wise + patch anti-cascade LR :
+- script dédié: `experiments/seedwise_coupling_diagnostics.py`
+- traces exportées par seed: `level_divergence`, `mu_sep`, `lr`, `level_accuracy`, états attracteurs
+- seeds testées: `42..46`, `n_samples=1200`
+- constat stable avant patch:
+  - un niveau reste fréquemment proche du hasard en fin de run (`level_acc ~ 0.500`)
+  - en phase 3 tardive, décays LR répétés jusqu'au plancher (`1e-4`), variance élevée entre seeds
+- correctif implémenté:
+  - limitation des décays LR de stabilité (cooldown + plafond d'événements)
+  - réaction de stabilité bornée à la phase 3
+  - réactivation mesurée de `mu_sep` adaptatif en phase 3 dans le protocole de diagnostic
+- résultats après patch (même protocole, seeds `42..46`):
+  - couplé (avant): `68.60% ± 7.54`, min `56.67%`
+  - couplé (après): `69.33% ± 7.10`, min `57.33%`
+  - indépendant: `59.73% ± 5.93`
+  - delta moyen couplé(après) - indépendant: `+9.60 points`
+- run dégradé toujours présent (seed `42`), mais queue basse légèrement réduite
+
+Sous-test E8 - Garde-fou level-aware (phase 3 uniquement) :
+- objectif: traiter les runs où un niveau reste proche du hasard (`~0.500`) en phase couplée active
+- déclenchement: uniquement en phase 3, sur divergence suffisante, avec condition d'accuracy globale basse
+- action: recovery locale douce des attracteurs du niveau bloqué + ajustement modéré `mu_sep`/LR
+- validation multi-seeds (`42..46`, `n_samples=1200`) :
+  - couplé baseline (avant): `68.60% ± 7.54`, min `56.67%`
+  - couplé level-aware (filtré): `70.80% ± 5.54`, min `60.67%`
+  - indépendant: `59.73% ± 5.93`
+  - delta moyen couplé(level-aware) - indépendant: `+11.07 points`
+- point clé:
+  - seed `42` passe de `-11.67 pts` (couplé vs indép.) à `+0.67 pt`
+  - les seeds forts restent positifs; légère baisse sur seed `46` (`-2.00 pts` vs baseline couplée)
+
 Condition d'initialisation obligatoire (I1) :
 - Pour éviter la dégénérescence en haute dimension, imposer
   `sigma_init^(l) = sqrt(d_l) * sigma_data^(l)`.
