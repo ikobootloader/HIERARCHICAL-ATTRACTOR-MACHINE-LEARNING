@@ -373,7 +373,7 @@ sigma = math.sqrt(self.dim) * data_std  # Au lieu de data_std seul
 
 **Outil diagnostic** : `diagnose_forces.py` détecte automatiquement la saturation
 
-⚠ï¸ **Sans ce fix, HAML ne fonctionne PAS au-delà de ~20 dimensions.**
+**Attention :** Sans ce fix, HAML ne fonctionne PAS au-delà de ~20 dimensions.
 
 ### Version 0.2.1 (avec entraînement par gradient)
 
