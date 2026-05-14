@@ -45,6 +45,12 @@ y_pred = model.predict(X_test)
 model.visualize_basins(X_test, level=0)
 ```
 
+Notes de configuration :
+- `rho_sigma_ratio` permet de contrôler explicitement l'initialisation
+  de la portée de répulsion (`rho_init = rho_sigma_ratio * sigma_init`).
+- `level_score_weighting` contrôle l'agrégation multi-niveaux
+  (`'exponential'` par défaut, option `'uniform'`).
+
 ## Architecture
 
 ```

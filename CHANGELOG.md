@@ -6,6 +6,34 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 
 ## [Non publié]
 
+### Modifié - 2026-05-14
+- Refactor de l'orchestration d'entraînement avec configurations métier dédiées :
+  - nouveau module `haml/training/config.py` avec
+    `PhaseConfig`, `StabilityConfig`, `AdaptiveMuSepConfig`,
+    `SoftLandingConfig`, `CollapseGuardConfig`
+  - `HAMLTrainer` accepte désormais ces objets de configuration
+    au lieu d'une longue liste de paramètres plats.
+- Intégration des nouvelles configs côté orchestration :
+  - `haml/model/haml.py` instancie `PhaseConfig` dans `train_model()`
+  - `experiments/concentric_coupling_ablation.py` migre vers les configs
+    groupées sans changement de protocole.
+- Réduction de duplication dans le scoring hiérarchique :
+  - extraction `_compute_hierarchical_scores()` et `_level_weight()`
+    dans `HAML` pour centraliser la logique utilisée par `predict`
+    et `predict_proba`.
+- Paramétrisation explicite de l'initialisation `rho` :
+  - ajout de `rho_sigma_ratio` (`HAML` et `Level`)
+  - remplacement de la constante en dur `rho_init = sigma * 2.0`.
+- Robustesse d'initialisation des attracteurs :
+  - validation explicite si une classe ne contient aucun échantillon
+    lors de `initialize_attractors`.
+- Ajout de tests unitaires ciblés (`tests/test_refactor_invariants.py`) :
+  - pondération de niveau (`uniform` / `exponential`)
+  - agrégation hiérarchique centralisée des scores
+  - application de `rho_sigma_ratio`
+  - erreur explicite si une classe est absente à l'initialisation
+  - injection des configs groupées dans `HAMLTrainer`.
+
 ### Modifie - 2026-05-13
 - Refactor du protocole `experiments/concentric_coupling_ablation.py` en ablation multi-seeds configurable.
 - Ajout des options CLI `--n-runs`, `--base-seed`, `--n-samples`, `--save-figure`, `--json-out`.
