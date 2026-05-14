@@ -11,12 +11,17 @@ import argparse
 import json
 import random
 import time
+import pathlib
+import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+
+# Priorise le package local github_app/haml.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 from haml import HAML
 
