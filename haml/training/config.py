@@ -22,6 +22,9 @@ class StabilityConfig:
     lr_decay_on_divergence: float = 0.5
     min_lr: float = 1e-4
     early_stop_on_divergence: bool = True
+    phase3_only: bool = True
+    lr_decay_cooldown_epochs: int = 2
+    max_lr_decay_events: int = 4
 
 
 @dataclass
@@ -52,3 +55,17 @@ class CollapseGuardConfig:
     delta_div_threshold: float = 0.10
     mu_sep_boost: float = 1.5
     lr_factor: float = 0.3
+
+
+@dataclass
+class LevelRecoveryConfig:
+    """Targeted recovery when one level stays near chance in phase 3."""
+    enabled: bool = False
+    chance_tolerance: float = 0.02
+    patience: int = 3
+    max_triggers: int = 1
+    require_divergence: float = 0.10
+    max_train_accuracy_to_trigger: float = 0.65
+    mu_sep_boost: float = 1.2
+    lr_factor: float = 0.8
+    jitter_std: float = 0.05

@@ -14,6 +14,7 @@ from .metrics import compute_level_accuracy
 from .config import (
     AdaptiveMuSepConfig,
     CollapseGuardConfig,
+    LevelRecoveryConfig,
     PhaseConfig,
     SoftLandingConfig,
     StabilityConfig,
@@ -40,6 +41,7 @@ class HAMLTrainer:
         adaptive_mu_sep_config=None,
         soft_landing_config=None,
         collapse_guard_config=None,
+        level_recovery_config=None,
         device='cpu',
         verbose=True
     ):
@@ -53,6 +55,7 @@ class HAMLTrainer:
             adaptive_mu_sep_config (AdaptiveMuSepConfig|None): Configuration mu_sep adaptatif
             soft_landing_config (SoftLandingConfig|None): Configuration soft landing
             collapse_guard_config (CollapseGuardConfig|None): Configuration collapse guard
+            level_recovery_config (LevelRecoveryConfig|None): Configuration de recuperation par niveau
             device (str): Device
             verbose (bool): Affichage
         """
@@ -64,6 +67,7 @@ class HAMLTrainer:
         self.adaptive_mu_sep_config = adaptive_mu_sep_config or AdaptiveMuSepConfig()
         self.soft_landing_config = soft_landing_config or SoftLandingConfig()
         self.collapse_guard_config = collapse_guard_config or CollapseGuardConfig()
+        self.level_recovery_config = level_recovery_config or LevelRecoveryConfig()
         self.device = device
         self.verbose = verbose
 
@@ -124,7 +128,11 @@ class HAMLTrainer:
 
         # Entraînement
         divergence_streak = 0
+        lr_decay_events = 0
+        last_lr_decay_epoch = -10**9
         mu_sep_streak = 0
+        level_recovery_streak = [0 for _ in range(len(self.model.levels))]
+        level_recovery_triggers = 0
         soft_landing_applied = False
         collapse_guard_applied = False
         prev_level_div = None
@@ -283,6 +291,38 @@ class HAMLTrainer:
                             f"(streak={mu_sep_streak}); mu_sep -> {new_mu_sep:.4f}"
                         )
 
+            if (
+                self.level_recovery_config.enabled
+                and phase == 3
+                and level_recovery_triggers < self.level_recovery_config.max_triggers
+                and level_div >= self.level_recovery_config.require_divergence
+                and accuracy <= self.level_recovery_config.max_train_accuracy_to_trigger
+            ):
+                stuck_level_idx = self._detect_stuck_level(level_accuracy, level_recovery_streak)
+                if stuck_level_idx is not None:
+                    self._apply_level_recovery(stuck_level_idx, X_train_t, y_train_t)
+                    level_recovery_triggers += 1
+
+                    new_mu_sep = min(
+                        self.adaptive_mu_sep_config.max_value,
+                        self.loss_fn.mu_sep * self.level_recovery_config.mu_sep_boost,
+                    )
+                    if new_mu_sep > self.loss_fn.mu_sep:
+                        self.loss_fn.set_weights(mu_sep=new_mu_sep)
+
+                    new_lr = max(
+                        self.stability_config.min_lr,
+                        self.optimizer.get_lr() * self.level_recovery_config.lr_factor,
+                    )
+                    self.optimizer.set_lr(new_lr)
+                    level_recovery_streak = [0 for _ in range(len(self.model.levels))]
+                    if self.verbose:
+                        print(
+                            f"[level-recovery] epoch={epoch+1}, level={stuck_level_idx}, "
+                            f"level_acc={level_accuracy[stuck_level_idx]:.3f}, "
+                            f"mu_sep -> {self.loss_fn.mu_sep:.4f}, lr -> {new_lr:.6f}"
+                        )
+
             # Soft landing: mode préventif (epoch) ou réactif (divergence), une seule fois.
             soft_landing_by_epoch = (
                 self.soft_landing_config.epoch is not None and (epoch + 1) >= self.soft_landing_config.epoch
@@ -311,18 +351,25 @@ class HAMLTrainer:
                         f"lr -> {new_lr:.6f}, freeze_mu={self.soft_landing_config.freeze_mu}"
                     )
 
-            if level_div > self.stability_config.level_divergence_threshold:
+            stability_phase_ok = (not self.stability_config.phase3_only) or (phase == 3)
+            cooldown_ok = (epoch - last_lr_decay_epoch) >= self.stability_config.lr_decay_cooldown_epochs
+            decay_budget_ok = lr_decay_events < self.stability_config.max_lr_decay_events
+            if level_div > self.stability_config.level_divergence_threshold and stability_phase_ok:
                 divergence_streak += 1
-                new_lr = max(
-                    self.stability_config.min_lr,
-                    self.optimizer.get_lr() * self.stability_config.lr_decay_on_divergence,
-                )
-                self.optimizer.set_lr(new_lr)
-                if self.verbose:
-                    print(
-                        f"[stability] level_div={level_div:.3f} > "
-                        f"{self.stability_config.level_divergence_threshold:.3f}; lr -> {new_lr:.6f}"
+                if cooldown_ok and decay_budget_ok:
+                    new_lr = max(
+                        self.stability_config.min_lr,
+                        self.optimizer.get_lr() * self.stability_config.lr_decay_on_divergence,
                     )
+                    self.optimizer.set_lr(new_lr)
+                    lr_decay_events += 1
+                    last_lr_decay_epoch = epoch
+                    if self.verbose:
+                        print(
+                            f"[stability] level_div={level_div:.3f} > "
+                            f"{self.stability_config.level_divergence_threshold:.3f}; "
+                            f"lr -> {new_lr:.6f} (event {lr_decay_events}/{self.stability_config.max_lr_decay_events})"
+                        )
             else:
                 divergence_streak = 0
 
@@ -385,6 +432,37 @@ class HAMLTrainer:
             for c in range(level.n_classes):
                 for attractor in level.attractors[str(c)]:
                     attractor.position.requires_grad_(False)
+
+    def _detect_stuck_level(self, level_accuracy, level_recovery_streak):
+        """Detecte un niveau bloque proche du hasard en phase 3."""
+        stuck_level_idx = None
+        lowest_acc = 1.0
+        for idx, (level, acc) in enumerate(zip(self.model.levels, level_accuracy)):
+            chance = 1.0 / float(level.n_classes)
+            if abs(acc - chance) <= self.level_recovery_config.chance_tolerance:
+                level_recovery_streak[idx] += 1
+            else:
+                level_recovery_streak[idx] = 0
+            if level_recovery_streak[idx] >= self.level_recovery_config.patience and acc < lowest_acc:
+                stuck_level_idx = idx
+                lowest_acc = acc
+        return stuck_level_idx
+
+    def _apply_level_recovery(self, level_idx, X_train_t, y_train_t):
+        """De-collapse localement les attracteurs d'un niveau bloque."""
+        level = self.model.levels[level_idx]
+        with torch.no_grad():
+            for class_idx in range(level.n_classes):
+                class_attractors = level.attractors[str(class_idx)]
+                if len(class_attractors) == 0:
+                    continue
+                positions = torch.stack([a.position for a in class_attractors], dim=0)
+                center = torch.mean(positions, dim=0)
+                for attractor in class_attractors:
+                    old_pos = attractor.position.detach().clone()
+                    jitter = self.level_recovery_config.jitter_std * torch.randn_like(center)
+                    target = center + jitter
+                    attractor.position.copy_(0.8 * old_pos + 0.2 * target)
 
     def plot_history(self):
         """Visualise l'historique d'entraînement."""

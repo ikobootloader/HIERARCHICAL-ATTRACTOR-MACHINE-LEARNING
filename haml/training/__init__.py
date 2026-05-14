@@ -10,6 +10,7 @@ from .config import (
     AdaptiveMuSepConfig,
     SoftLandingConfig,
     CollapseGuardConfig,
+    LevelRecoveryConfig,
 )
 
 __all__ = [
@@ -21,6 +22,7 @@ __all__ = [
     'AdaptiveMuSepConfig',
     'SoftLandingConfig',
     'CollapseGuardConfig',
+    'LevelRecoveryConfig',
     'compute_level_accuracy',
     'compute_attraction_force_stats'
 ]
