@@ -540,3 +540,5 @@ haml/
 
 *Spécification théorique v2.0 — consolidée après analyse complète de Q1–Q4.
 Les quatre propositions (§3–§6) constituent la base théorique d'une contribution publiable.*
+
+*Projet intitié par curiosité - FM*
