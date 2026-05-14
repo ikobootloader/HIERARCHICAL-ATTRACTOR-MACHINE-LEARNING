@@ -11,6 +11,13 @@ import torch
 import numpy as np
 from tqdm import tqdm
 from .metrics import compute_level_accuracy
+from .config import (
+    AdaptiveMuSepConfig,
+    CollapseGuardConfig,
+    PhaseConfig,
+    SoftLandingConfig,
+    StabilityConfig,
+)
 
 
 class HAMLTrainer:
@@ -28,31 +35,11 @@ class HAMLTrainer:
         model,
         optimizer,
         loss_fn,
-        n_epochs=50,
-        batch_size=32,
-        phase1_epochs=15,
-        phase2_epochs=15,
-        td_warmup_power=1.0,
-        level_divergence_threshold=0.15,
-        divergence_patience=2,
-        lr_decay_on_divergence=0.5,
-        min_lr=1e-4,
-        early_stop_on_divergence=True,
-        adaptive_mu_sep=True,
-        adaptive_mu_sep_phase3_only=True,
-        mu_sep_trigger_divergence=0.05,
-        mu_sep_patience=1,
-        mu_sep_growth_factor=1.2,
-        mu_sep_max=1.0,
-        soft_landing_epoch=None,
-        soft_landing_trigger_divergence=None,
-        soft_landing_lr_factor=0.1,
-        soft_landing_freeze_mu=True,
-        collapse_guard_enabled=False,
-        collapse_guard_start_epoch=18,
-        collapse_guard_delta_div_threshold=0.10,
-        collapse_guard_mu_sep_boost=1.5,
-        collapse_guard_lr_factor=0.3,
+        phase_config=None,
+        stability_config=None,
+        adaptive_mu_sep_config=None,
+        soft_landing_config=None,
+        collapse_guard_config=None,
         device='cpu',
         verbose=True
     ):
@@ -61,62 +48,22 @@ class HAMLTrainer:
             model (HAML): Modèle HAML
             optimizer (ConstrainedOptimizer): Optimiseur avec contraintes
             loss_fn (HAMLLoss): Fonction de loss
-            n_epochs (int): Nombre total d'epochs
-            batch_size (int): Taille des batchs
-            phase1_epochs (int): Epochs phase 1 (niveaux indépendants)
-            phase2_epochs (int): Epochs phase 2 (couplage progressif)
-            td_warmup_power (float): Exposant de warmup top-down en phase 2
-            level_divergence_threshold (float): Seuil max(level_acc)-min(level_acc)
-            divergence_patience (int): Nb d'epochs divergentes tolérées avant stop
-            lr_decay_on_divergence (float): Facteur multiplicatif de LR en divergence
-            min_lr (float): LR minimal
-            early_stop_on_divergence (bool): Active arrêt anticipé défensif
-            adaptive_mu_sep (bool): Active montée adaptative de mu_sep
-            adaptive_mu_sep_phase3_only (bool): N'active mu_sep adaptatif qu'en phase 3
-            mu_sep_trigger_divergence (float): Seuil préventif de divergence
-            mu_sep_patience (int): Nb d'epochs consécutives au-dessus du seuil avant hausse de mu_sep
-            mu_sep_growth_factor (float): Multiplicateur de mu_sep
-            mu_sep_max (float): Cap supérieur de mu_sep
-            soft_landing_epoch (int|None): Epoch (1-based) déclencheur soft landing
-            soft_landing_trigger_divergence (float|None): Déclenchement soft landing si level_div dépasse ce seuil
-            soft_landing_lr_factor (float): Facteur LR au soft landing
-            soft_landing_freeze_mu (bool): Gèle les positions mu au soft landing
-            collapse_guard_enabled (bool): Active la détection de collapse brutal inter-niveaux
-            collapse_guard_start_epoch (int): Epoch minimale (1-based) avant activation du guard
-            collapse_guard_delta_div_threshold (float): Seuil de saut sur delta(level_div)
-            collapse_guard_mu_sep_boost (float): Multiplicateur ponctuel de mu_sep
-            collapse_guard_lr_factor (float): Facteur multiplicatif de LR lors du collapse
+            phase_config (PhaseConfig|None): Configuration de phases
+            stability_config (StabilityConfig|None): Configuration de stabilité
+            adaptive_mu_sep_config (AdaptiveMuSepConfig|None): Configuration mu_sep adaptatif
+            soft_landing_config (SoftLandingConfig|None): Configuration soft landing
+            collapse_guard_config (CollapseGuardConfig|None): Configuration collapse guard
             device (str): Device
             verbose (bool): Affichage
         """
         self.model = model
         self.optimizer = optimizer
         self.loss_fn = loss_fn
-        self.n_epochs = n_epochs
-        self.batch_size = batch_size
-        self.phase1_epochs = phase1_epochs
-        self.phase2_epochs = phase2_epochs
-        self.td_warmup_power = td_warmup_power
-        self.level_divergence_threshold = level_divergence_threshold
-        self.divergence_patience = divergence_patience
-        self.lr_decay_on_divergence = lr_decay_on_divergence
-        self.min_lr = min_lr
-        self.early_stop_on_divergence = early_stop_on_divergence
-        self.adaptive_mu_sep = adaptive_mu_sep
-        self.adaptive_mu_sep_phase3_only = adaptive_mu_sep_phase3_only
-        self.mu_sep_trigger_divergence = mu_sep_trigger_divergence
-        self.mu_sep_patience = mu_sep_patience
-        self.mu_sep_growth_factor = mu_sep_growth_factor
-        self.mu_sep_max = mu_sep_max
-        self.soft_landing_epoch = soft_landing_epoch
-        self.soft_landing_trigger_divergence = soft_landing_trigger_divergence
-        self.soft_landing_lr_factor = soft_landing_lr_factor
-        self.soft_landing_freeze_mu = soft_landing_freeze_mu
-        self.collapse_guard_enabled = collapse_guard_enabled
-        self.collapse_guard_start_epoch = collapse_guard_start_epoch
-        self.collapse_guard_delta_div_threshold = collapse_guard_delta_div_threshold
-        self.collapse_guard_mu_sep_boost = collapse_guard_mu_sep_boost
-        self.collapse_guard_lr_factor = collapse_guard_lr_factor
+        self.phase_config = phase_config or PhaseConfig()
+        self.stability_config = stability_config or StabilityConfig()
+        self.adaptive_mu_sep_config = adaptive_mu_sep_config or AdaptiveMuSepConfig()
+        self.soft_landing_config = soft_landing_config or SoftLandingConfig()
+        self.collapse_guard_config = collapse_guard_config or CollapseGuardConfig()
         self.device = device
         self.verbose = verbose
 
@@ -156,16 +103,23 @@ class HAMLTrainer:
         y_train_t = torch.from_numpy(y_train).long().to(self.device)
 
         n_samples = len(X_train)
-        n_batches = (n_samples + self.batch_size - 1) // self.batch_size
+        n_batches = (n_samples + self.phase_config.batch_size - 1) // self.phase_config.batch_size
 
         if self.verbose:
             print("\n" + "="*70)
             print("HAML Training - 3 Phase Strategy")
             print("="*70)
-            print(f"Total epochs: {self.n_epochs}")
-            print(f"  Phase 1 (independent): epochs 0-{self.phase1_epochs}")
-            print(f"  Phase 2 (progressive): epochs {self.phase1_epochs}-{self.phase1_epochs + self.phase2_epochs}")
-            print(f"  Phase 3 (joint): epochs {self.phase1_epochs + self.phase2_epochs}-{self.n_epochs}")
+            print(f"Total epochs: {self.phase_config.n_epochs}")
+            print(f"  Phase 1 (independent): epochs 0-{self.phase_config.phase1_epochs}")
+            print(
+                f"  Phase 2 (progressive): epochs {self.phase_config.phase1_epochs}-"
+                f"{self.phase_config.phase1_epochs + self.phase_config.phase2_epochs}"
+            )
+            print(
+                f"  Phase 3 (joint): epochs "
+                f"{self.phase_config.phase1_epochs + self.phase_config.phase2_epochs}-"
+                f"{self.phase_config.n_epochs}"
+            )
             print("="*70 + "\n")
 
         # Entraînement
@@ -174,14 +128,14 @@ class HAMLTrainer:
         soft_landing_applied = False
         collapse_guard_applied = False
         prev_level_div = None
-        for epoch in range(self.n_epochs):
+        for epoch in range(self.phase_config.n_epochs):
             # Détermination de la phase
-            if epoch < self.phase1_epochs:
+            if epoch < self.phase_config.phase1_epochs:
                 phase = 1
                 self._set_coupling_phase1()
-            elif epoch < self.phase1_epochs + self.phase2_epochs:
+            elif epoch < self.phase_config.phase1_epochs + self.phase_config.phase2_epochs:
                 phase = 2
-                progress = (epoch - self.phase1_epochs) / self.phase2_epochs
+                progress = (epoch - self.phase_config.phase1_epochs) / self.phase_config.phase2_epochs
                 self._set_coupling_phase2(progress)
             else:
                 phase = 3
@@ -197,13 +151,13 @@ class HAMLTrainer:
             indices = torch.randperm(n_samples)
 
             if self.verbose:
-                pbar = tqdm(range(n_batches), desc=f"Epoch {epoch+1}/{self.n_epochs} [Phase {phase}]")
+                pbar = tqdm(range(n_batches), desc=f"Epoch {epoch+1}/{self.phase_config.n_epochs} [Phase {phase}]")
             else:
                 pbar = range(n_batches)
 
             for batch_idx in pbar:
-                start_idx = batch_idx * self.batch_size
-                end_idx = min(start_idx + self.batch_size, n_samples)
+                start_idx = batch_idx * self.phase_config.batch_size
+                end_idx = min(start_idx + self.phase_config.batch_size, n_samples)
                 batch_indices = indices[start_idx:end_idx]
 
                 X_batch = X_train_t[batch_indices]
@@ -280,79 +234,94 @@ class HAMLTrainer:
             self.history['mu_sep'].append(self.loss_fn.mu_sep)
 
             if (
-                self.collapse_guard_enabled
+                self.collapse_guard_config.enabled
                 and not collapse_guard_applied
                 and prev_level_div is not None
-                and (epoch + 1) >= self.collapse_guard_start_epoch
+                and (epoch + 1) >= self.collapse_guard_config.start_epoch
             ):
                 delta_div = level_div - prev_level_div
-                if delta_div > self.collapse_guard_delta_div_threshold:
-                    new_mu_sep = min(self.mu_sep_max, self.loss_fn.mu_sep * self.collapse_guard_mu_sep_boost)
+                if delta_div > self.collapse_guard_config.delta_div_threshold:
+                    new_mu_sep = min(
+                        self.adaptive_mu_sep_config.max_value,
+                        self.loss_fn.mu_sep * self.collapse_guard_config.mu_sep_boost,
+                    )
                     if new_mu_sep > self.loss_fn.mu_sep:
                         self.loss_fn.set_weights(mu_sep=new_mu_sep)
-                    new_lr = max(self.min_lr, self.optimizer.get_lr() * self.collapse_guard_lr_factor)
+                    new_lr = max(
+                        self.stability_config.min_lr,
+                        self.optimizer.get_lr() * self.collapse_guard_config.lr_factor,
+                    )
                     self.optimizer.set_lr(new_lr)
                     collapse_guard_applied = True
                     if self.verbose:
                         print(
                             f"[collapse-guard] epoch={epoch+1}, delta_div={delta_div:.3f} > "
-                            f"{self.collapse_guard_delta_div_threshold:.3f}; "
+                            f"{self.collapse_guard_config.delta_div_threshold:.3f}; "
                             f"mu_sep -> {self.loss_fn.mu_sep:.4f}, lr -> {new_lr:.6f}"
                         )
 
-            use_adaptive_mu_sep = self.adaptive_mu_sep
-            if self.adaptive_mu_sep_phase3_only and phase != 3:
+            use_adaptive_mu_sep = self.adaptive_mu_sep_config.enabled
+            if self.adaptive_mu_sep_config.phase3_only and phase != 3:
                 use_adaptive_mu_sep = False
 
-            if use_adaptive_mu_sep and level_div > self.mu_sep_trigger_divergence:
+            if use_adaptive_mu_sep and level_div > self.adaptive_mu_sep_config.trigger_divergence:
                 mu_sep_streak += 1
             else:
                 mu_sep_streak = 0
 
-            if use_adaptive_mu_sep and mu_sep_streak >= self.mu_sep_patience:
-                new_mu_sep = min(self.mu_sep_max, self.loss_fn.mu_sep * self.mu_sep_growth_factor)
+            if use_adaptive_mu_sep and mu_sep_streak >= self.adaptive_mu_sep_config.patience:
+                new_mu_sep = min(
+                    self.adaptive_mu_sep_config.max_value,
+                    self.loss_fn.mu_sep * self.adaptive_mu_sep_config.growth_factor,
+                )
                 if new_mu_sep > self.loss_fn.mu_sep:
                     self.loss_fn.set_weights(mu_sep=new_mu_sep)
                     if self.verbose:
                         print(
                             f"[mu-sep] level_div={level_div:.3f} > "
-                            f"{self.mu_sep_trigger_divergence:.3f} "
+                            f"{self.adaptive_mu_sep_config.trigger_divergence:.3f} "
                             f"(streak={mu_sep_streak}); mu_sep -> {new_mu_sep:.4f}"
                         )
 
             # Soft landing: mode préventif (epoch) ou réactif (divergence), une seule fois.
             soft_landing_by_epoch = (
-                self.soft_landing_epoch is not None and (epoch + 1) >= self.soft_landing_epoch
+                self.soft_landing_config.epoch is not None and (epoch + 1) >= self.soft_landing_config.epoch
             )
             soft_landing_by_div = (
-                self.soft_landing_trigger_divergence is not None
-                and level_div >= self.soft_landing_trigger_divergence
+                self.soft_landing_config.trigger_divergence is not None
+                and level_div >= self.soft_landing_config.trigger_divergence
             )
             if not soft_landing_applied and (soft_landing_by_epoch or soft_landing_by_div):
-                new_lr = max(self.min_lr, self.optimizer.get_lr() * self.soft_landing_lr_factor)
+                new_lr = max(
+                    self.stability_config.min_lr,
+                    self.optimizer.get_lr() * self.soft_landing_config.lr_factor,
+                )
                 self.optimizer.set_lr(new_lr)
-                if self.soft_landing_freeze_mu:
+                if self.soft_landing_config.freeze_mu:
                     self._freeze_mu_positions()
                 soft_landing_applied = True
                 if self.verbose:
                     reason = (
-                        f"epoch>={self.soft_landing_epoch}"
+                        f"epoch>={self.soft_landing_config.epoch}"
                         if soft_landing_by_epoch
-                        else f"level_div>={self.soft_landing_trigger_divergence:.3f}"
+                        else f"level_div>={self.soft_landing_config.trigger_divergence:.3f}"
                     )
                     print(
                         f"[soft-landing] reason={reason}, epoch={epoch+1}, "
-                        f"lr -> {new_lr:.6f}, freeze_mu={self.soft_landing_freeze_mu}"
+                        f"lr -> {new_lr:.6f}, freeze_mu={self.soft_landing_config.freeze_mu}"
                     )
 
-            if level_div > self.level_divergence_threshold:
+            if level_div > self.stability_config.level_divergence_threshold:
                 divergence_streak += 1
-                new_lr = max(self.min_lr, self.optimizer.get_lr() * self.lr_decay_on_divergence)
+                new_lr = max(
+                    self.stability_config.min_lr,
+                    self.optimizer.get_lr() * self.stability_config.lr_decay_on_divergence,
+                )
                 self.optimizer.set_lr(new_lr)
                 if self.verbose:
                     print(
                         f"[stability] level_div={level_div:.3f} > "
-                        f"{self.level_divergence_threshold:.3f}; lr -> {new_lr:.6f}"
+                        f"{self.stability_config.level_divergence_threshold:.3f}; lr -> {new_lr:.6f}"
                     )
             else:
                 divergence_streak = 0
@@ -366,11 +335,11 @@ class HAMLTrainer:
                     msg += f", val_acc={val_accuracy:.3f}"
                 print(msg)
 
-            if self.early_stop_on_divergence and divergence_streak >= self.divergence_patience:
+            if self.stability_config.early_stop_on_divergence and divergence_streak >= self.stability_config.divergence_patience:
                 if self.verbose:
                     print(
                         f"[early-stop] divergence streak={divergence_streak} "
-                        f"(threshold={self.level_divergence_threshold:.3f})"
+                        f"(threshold={self.stability_config.level_divergence_threshold:.3f})"
                     )
                 break
 
@@ -398,7 +367,7 @@ class HAMLTrainer:
             progress (float): Progression 0->1
         """
         alpha_bu = progress * self.alpha_bu_target
-        alpha_td = (progress ** self.td_warmup_power) * self.alpha_td_target
+        alpha_td = (progress ** self.phase_config.td_warmup_power) * self.alpha_td_target
 
         with torch.no_grad():
             self.model.coupling.log_alpha_bu.fill_(torch.log(torch.tensor(alpha_bu + 1e-6)))
@@ -449,10 +418,10 @@ class HAMLTrainer:
         axes[1, 0].grid(True, alpha=0.3)
 
         # Phases
-        axes[1, 1].axvspan(0, self.phase1_epochs, alpha=0.2, color='red', label='Phase 1')
-        axes[1, 1].axvspan(self.phase1_epochs, self.phase1_epochs + self.phase2_epochs,
+        axes[1, 1].axvspan(0, self.phase_config.phase1_epochs, alpha=0.2, color='red', label='Phase 1')
+        axes[1, 1].axvspan(self.phase_config.phase1_epochs, self.phase_config.phase1_epochs + self.phase_config.phase2_epochs,
                           alpha=0.2, color='orange', label='Phase 2')
-        axes[1, 1].axvspan(self.phase1_epochs + self.phase2_epochs, self.n_epochs,
+        axes[1, 1].axvspan(self.phase_config.phase1_epochs + self.phase_config.phase2_epochs, self.phase_config.n_epochs,
                           alpha=0.2, color='green', label='Phase 3')
         axes[1, 1].plot(self.history['accuracy'], 'k-', linewidth=2)
         axes[1, 1].set_title('Training Phases')

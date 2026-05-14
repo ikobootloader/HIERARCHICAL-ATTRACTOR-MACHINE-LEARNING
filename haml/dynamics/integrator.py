@@ -13,6 +13,11 @@ Méthodes :
 import torch
 import torch.nn as nn
 
+try:
+    from torchdiffeq import odeint_adjoint as _odeint_adjoint
+except Exception:  # pragma: no cover - optional dependency
+    _odeint_adjoint = None
+
 
 class ODEIntegrator(nn.Module):
     """
@@ -45,6 +50,7 @@ class ODEIntegrator(nn.Module):
         self.dt = dt
         self.max_steps = max_steps
         self.tol = tol
+        self._warned_missing_adjoint = False
 
     def compute_forces(self, states):
         """
@@ -153,6 +159,9 @@ class ODEIntegrator(nn.Module):
                 - converged : True si convergence atteinte
                 - trajectory : Liste des états si return_trajectory=True
         """
+        if self.method == 'adjoint':
+            return self.integrate_adjoint(initial_states, return_trajectory=return_trajectory)
+
         states = initial_states
         trajectory = [states] if return_trajectory else []
 
@@ -188,7 +197,38 @@ class ODEIntegrator(nn.Module):
 
         return states, step + 1, converged, trajectory
 
-    def integrate_adjoint(self, initial_states):
+    def _flatten_states(self, states):
+        """Concatène [x^(0),...,x^(L)] en un tenseur 2D (batch, total_dim)."""
+        return torch.cat(states, dim=1)
+
+    def _unflatten_states(self, flat, state_dims):
+        """Découpe un tenseur 2D (batch, total_dim) en liste d'états par niveau."""
+        parts = []
+        offset = 0
+        for dim in state_dims:
+            parts.append(flat[:, offset:offset + dim])
+            offset += dim
+        return parts
+
+    def _compute_convergence_step(self, flat_traj):
+        """
+        Détecte le premier pas où ||dx/dt|| < tol.
+
+        Args:
+            flat_traj (torch.Tensor): (n_times, batch, total_dim)
+
+        Returns:
+            tuple: (step_idx, converged)
+        """
+        n_times = flat_traj.shape[0]
+        for i in range(1, n_times):
+            dx = flat_traj[i] - flat_traj[i - 1]
+            velocity = torch.norm(dx) / self.dt
+            if velocity.item() < self.tol:
+                return i, True
+        return n_times - 1, False
+
+    def integrate_adjoint(self, initial_states, return_trajectory=False):
         """
         Intégration avec méthode adjointe (pour backprop efficace en mémoire).
 
@@ -196,14 +236,57 @@ class ODEIntegrator(nn.Module):
 
         Args:
             initial_states (list[torch.Tensor]): États initiaux
+            return_trajectory (bool): Si True, retourne la trajectoire discrète
 
         Returns:
             tuple: (final_states, n_steps, converged, trajectory)
         """
-        # TODO: Implémenter avec torchdiffeq.odeint_adjoint
-        # Pour l'instant, fallback sur RK4
-        print("Warning: Adjoint method not implemented, using RK4")
-        return self.integrate(initial_states, return_trajectory=False)
+        if _odeint_adjoint is None:
+            if not self._warned_missing_adjoint:
+                print("Warning: torchdiffeq not available, fallback to RK4")
+                self._warned_missing_adjoint = True
+            prev_method = self.method
+            self.method = 'rk4'
+            try:
+                return self.integrate(initial_states, return_trajectory=return_trajectory)
+            finally:
+                self.method = prev_method
+
+        state_dims = [x.shape[1] for x in initial_states]
+        y0 = self._flatten_states(initial_states)
+        t = torch.linspace(
+            0.0,
+            self.dt * self.max_steps,
+            self.max_steps + 1,
+            device=y0.device,
+            dtype=y0.dtype
+        )
+
+        def rhs(_t, y_flat):
+            states = self._unflatten_states(y_flat, state_dims)
+            velocities = self.velocity_field(states)
+            return self._flatten_states(velocities)
+
+        # Adjoint method for memory-efficient backprop through ODE solve
+        flat_traj = _odeint_adjoint(
+            rhs,
+            y0,
+            t,
+            method='rk4',
+            options={'step_size': self.dt},
+            adjoint_params=tuple(self.parameters())
+        )  # (n_times, batch, total_dim)
+
+        step_idx, converged = self._compute_convergence_step(flat_traj)
+        final_flat = flat_traj[step_idx]
+        final_states = self._unflatten_states(final_flat, state_dims)
+
+        trajectory = []
+        if return_trajectory:
+            for i in range(step_idx + 1):
+                trajectory.append(self._unflatten_states(flat_traj[i], state_dims))
+
+        return final_states, step_idx, converged, trajectory
 
     def compute_dynamic_loss(self, trajectory):
         """

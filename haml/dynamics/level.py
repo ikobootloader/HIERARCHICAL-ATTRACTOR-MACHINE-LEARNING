@@ -4,6 +4,7 @@ Module Level.
 Implémente un niveau hiérarchique complet avec K×M attracteurs et le calcul de F_intra.
 """
 
+import math
 import torch
 import torch.nn as nn
 from .attractor import Attractor
@@ -20,7 +21,15 @@ class Level(nn.Module):
     - Énergie totale E^(l)
     """
 
-    def __init__(self, level_idx, dim, n_classes, n_attractors_per_class, lambda_repulsion=0.5):
+    def __init__(
+        self,
+        level_idx,
+        dim,
+        n_classes,
+        n_attractors_per_class,
+        lambda_repulsion=0.5,
+        rho_sigma_ratio=2.0
+    ):
         """
         Args:
             level_idx (int): Indice du niveau (0 = input, L = abstract)
@@ -28,6 +37,7 @@ class Level(nn.Module):
             n_classes (int): Nombre de classes K
             n_attractors_per_class (int): Nombre d'attracteurs M par classe
             lambda_repulsion (float): Coefficient λ (attraction/répulsion)
+            rho_sigma_ratio (float): Ratio d'initialisation rho/sigma (> 1.0)
         """
         super().__init__()
 
@@ -36,6 +46,7 @@ class Level(nn.Module):
         self.n_classes = n_classes
         self.n_attractors_per_class = n_attractors_per_class
         self.lambda_repulsion = lambda_repulsion
+        self.rho_sigma_ratio = rho_sigma_ratio
 
         # Attracteurs organisés par classe
         self.attractors = nn.ModuleDict()
@@ -62,6 +73,10 @@ class Level(nn.Module):
             # Données de la classe c
             mask = y_np == c
             X_c = X_np[mask]
+            if len(X_c) == 0:
+                raise ValueError(
+                    f"Cannot initialize level {self.level_idx}: class {c} has no samples."
+                )
 
             if len(X_c) < self.n_attractors_per_class:
                 # Pas assez de données : dupliquer avec bruit
@@ -84,7 +99,6 @@ class Level(nn.Module):
                 if len(X_c) > 1:
                     data_std = torch.std(torch.from_numpy(X_c).float()).item()
                     # Rescaling critique pour haute dimension: σ ~ √d * data_std
-                    import math
                     sigma = math.sqrt(self.dim) * data_std
                     sigma = max(sigma, 0.1)  # Borne inf
                 else:
@@ -99,7 +113,7 @@ class Level(nn.Module):
                     class_label=c,
                     dim=self.dim,
                     sigma_init=sigma,
-                    rho_init=sigma * 2.0,  # ρ = 2σ
+                    rho_init=sigma * self.rho_sigma_ratio,
                     weight_init=1.0
                 )
                 self.attractors[str(c)].append(attractor)

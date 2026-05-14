@@ -16,6 +16,7 @@ from ..dynamics import Level, BidirectionalCoupling, ODEIntegrator
 from ..training import (
     HAMLLoss,
     ConstrainedOptimizer,
+    PhaseConfig,
     compute_level_accuracy,
     compute_attraction_force_stats
 )
@@ -45,6 +46,7 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
         alpha_td=1.0,
         gamma=1.0,
         lambda_repulsion=0.5,
+        rho_sigma_ratio=2.0,
         mu_sep=0.1,
         mu_dyn=0.01,
         integrator_method='rk4',
@@ -57,6 +59,7 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
         n_epochs=50,
         batch_size=32,
         train_on_fit=False,
+        level_score_weighting='exponential',
         device='cpu'
     ):
         """
@@ -68,6 +71,7 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
             alpha_td (float): Coefficient top-down
             gamma (float): Amortissement
             lambda_repulsion (float): Ratio attraction/répulsion λ
+            rho_sigma_ratio (float): Ratio d'initialisation rho/sigma (>1.0)
             mu_sep (float): Poids L_sep
             mu_dyn (float): Poids L_dyn
             integrator_method (str): 'euler', 'rk4', ou 'adjoint'
@@ -76,6 +80,7 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
             tol (float): Tolérance convergence
             learn_projections (bool): Affiner projections PCA
             learn_alphas (bool): Apprendre α_bu, α_td
+            level_score_weighting (str): 'uniform' ou 'exponential'
             device (str): 'cpu' ou 'cuda'
         """
         super().__init__()
@@ -90,6 +95,7 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
         self.alpha_td = alpha_td
         self.gamma = gamma
         self.lambda_repulsion = lambda_repulsion
+        self.rho_sigma_ratio = rho_sigma_ratio
         self.mu_sep = mu_sep
         self.mu_dyn = mu_dyn
         self.integrator_method = integrator_method
@@ -102,6 +108,7 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
         self.n_epochs = n_epochs
         self.batch_size = batch_size
         self.train_on_fit = train_on_fit
+        self.level_score_weighting = level_score_weighting
 
         # Modules (initialisés dans fit)
         self.scaler = StandardScaler()
@@ -162,7 +169,8 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
                 dim=dim,
                 n_classes=self.n_classes_,
                 n_attractors_per_class=self.n_attractors_per_class,
-                lambda_repulsion=self.lambda_repulsion
+                lambda_repulsion=self.lambda_repulsion,
+                rho_sigma_ratio=self.rho_sigma_ratio
             ).to(self.device)
             self.levels.append(level)
 
@@ -257,10 +265,13 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
             model=self,
             optimizer=optimizer,
             loss_fn=self.loss_fn,
-            n_epochs=self.n_epochs,
-            batch_size=self.batch_size,
-            phase1_epochs=max(1, self.n_epochs // 3),
-            phase2_epochs=max(1, self.n_epochs // 3),
+            phase_config=PhaseConfig(
+                n_epochs=self.n_epochs,
+                batch_size=self.batch_size,
+                phase1_epochs=max(1, self.n_epochs // 3),
+                phase2_epochs=max(1, self.n_epochs // 3),
+                td_warmup_power=1.0,
+            ),
             device=self.device,
             verbose=True
         )
@@ -308,15 +319,7 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
         self.eval()
         with torch.no_grad():
             final_states, _, _ = self.forward(X_torch)
-
-            # Agrégation des scores par classe
-            batch_size = X.shape[0]
-            scores = torch.zeros(batch_size, self.n_classes_, device=self.device)
-
-            for l, (level, state) in enumerate(zip(self.levels, final_states)):
-                beta = 2 ** l  # Poids par niveau
-                level_scores = level.predict_class_scores(state)
-                scores += beta * level_scores
+            scores = self._compute_hierarchical_scores(final_states)
 
             # Classe avec score max
             predictions = torch.argmax(scores, dim=1)
@@ -342,14 +345,7 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
         self.eval()
         with torch.no_grad():
             final_states, _, _ = self.forward(X_torch)
-
-            batch_size = X.shape[0]
-            scores = torch.zeros(batch_size, self.n_classes_, device=self.device)
-
-            for l, (level, state) in enumerate(zip(self.levels, final_states)):
-                beta = 2 ** l
-                level_scores = level.predict_class_scores(state)
-                scores += beta * level_scores
+            scores = self._compute_hierarchical_scores(final_states)
 
             # Softmax pour probabilités
             probs = torch.softmax(scores, dim=1)
@@ -369,6 +365,26 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
         """
         y_pred = self.predict(X)
         return np.mean(y_pred == y)
+
+    def _level_weight(self, level_idx):
+        """Retourne le poids d'agrégation d'un niveau hiérarchique."""
+        if self.level_score_weighting == 'uniform':
+            return 1.0
+        if self.level_score_weighting == 'exponential':
+            return float(2 ** level_idx)
+        raise ValueError(
+            f"Unknown level_score_weighting='{self.level_score_weighting}'. "
+            "Use 'uniform' or 'exponential'."
+        )
+
+    def _compute_hierarchical_scores(self, final_states):
+        """Agrège les scores classe par classe sur tous les niveaux."""
+        batch_size = final_states[0].shape[0]
+        scores = torch.zeros(batch_size, self.n_classes_, device=self.device)
+        for l, (level, state) in enumerate(zip(self.levels, final_states)):
+            level_scores = level.predict_class_scores(state)
+            scores += self._level_weight(l) * level_scores
+        return scores
 
     def get_final_states(self, X):
         """
@@ -423,8 +439,10 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
             'alpha_td': self.alpha_td,
             'gamma': self.gamma,
             'lambda_repulsion': self.lambda_repulsion,
+            'rho_sigma_ratio': self.rho_sigma_ratio,
             'mu_sep': self.mu_sep,
             'mu_dyn': self.mu_dyn,
+            'level_score_weighting': self.level_score_weighting,
             'device': self.device
         }
 
