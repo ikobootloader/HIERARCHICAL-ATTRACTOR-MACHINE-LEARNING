@@ -121,6 +121,19 @@ def _history_summary(history):
         "mu_sep_final": float(mu_sep[-1]),
         "level_accuracy_final": [float(v) for v in level_acc[-1]],
         "level_accuracy_min_overall": float(np.min(np.array(level_acc))),
+        "attractor_separation_ratio_final": [
+            float(level_diag["separation_ratio"])
+            for level_diag in history["level_attractor_diagnostics"][-1]
+        ],
+        "attractor_separation_ratio_min_overall": float(
+            np.min(
+                [
+                    level_diag["separation_ratio"]
+                    for epoch_diag in history["level_attractor_diagnostics"]
+                    for level_diag in epoch_diag
+                ]
+            )
+        ),
     }
 
 
@@ -201,13 +214,14 @@ def train_configured_model(X_train, y_train, mode, seed):
             level_recovery_config=LevelRecoveryConfig(
                 enabled=True,
                 chance_tolerance=0.02,
-                patience=3,
+                patience=5,
                 max_triggers=1,
                 require_divergence=0.11,
-                max_train_accuracy_to_trigger=0.66,
+                max_train_accuracy_to_trigger=0.64,
                 mu_sep_boost=1.2,
                 lr_factor=0.8,
                 jitter_std=0.01,
+                target_level_idx=1,
             ),
             device=model.device,
             verbose=True,
@@ -246,6 +260,7 @@ def run_seed(seed, n_samples, mode):
             "lr": [float(v) for v in history["lr"]],
             "mu_sep": [float(v) for v in history["mu_sep"]],
             "level_accuracy": [[float(x) for x in row] for row in history["level_accuracy"]],
+            "level_attractor_diagnostics": history["level_attractor_diagnostics"],
         },
         "history_summary": _history_summary(history),
         "attractor_stats": _extract_attractor_stats(model),
