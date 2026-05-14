@@ -119,7 +119,7 @@ Pour améliorer la lisibilité, les résultats sont segmentés par campagnes de 
 | B (Concentrique) | Tester l'apport du couplage sur topologie non convexe | `experiments/concentric_coupling_ablation.py` | Delta couplé vs indép. (multi-seeds) |
 | C (Bruité) | Évaluer robustesse au bruit (`make_moons`) | `experiments/noisy_benchmark.py` | Courbe du delta couplé-vs-indép. selon bruit |
 | D (SA-nODE-reimpl) | Comparaison architecturale contrôlée hiérarchie vs plat | `experiments/noisy_sanode_comparison.py`, `experiments/tune_sanode_reimpl.py` | Accuracy HAML couplé vs SA-nODE-reimpl |
-| E (Stabilisation) | Stabiliser les gains couplés forts sur concentrique | `experiments/concentric_coupling_ablation.py`, `experiments/seedwise_coupling_diagnostics.py` | E10 (`n_samples=3200`): `78.75% ± 7.63`, min `68.25%` |
+| E (Stabilisation) | Stabiliser les gains couplés forts sur concentrique | `experiments/concentric_coupling_ablation.py`, `experiments/seedwise_coupling_diagnostics.py` | E10c (`thr=0.71`): `74.68% ± 5.49`, min `67.25%` |
 
 ### Campagne A - MNIST subset (1500/500, 5 epochs)
 
@@ -445,6 +445,18 @@ Sous-test E10b - Recovery multi-niveaux dynamique (`target_level_idx=None`) :
 - conclusion:
   - la détection dynamique ne suffit pas seule: le recovery ne s'active pas sur ces runs
   - le verrou n'est pas la restriction L1 mais les conditions de déclenchement sur ce protocole `n_samples=3200`.
+
+Sous-test E10c - Recalibrage de gate `max_train_accuracy_to_trigger=0.71` :
+- objectif: garder la gate ouverte plus longtemps sur `n_samples=3200` pour récupérer les runs avec niveau bloqué
+- validation ciblée:
+  - seed `45`: trigger phase 3 observé, score `68.88%` (au-dessus de `68.25%` de référence seed 45)
+  - seed `42`: aucun trigger observé sur ce run ciblé, score `77.63%`
+- campagne complète `42..46`:
+  - couplé: `74.68% ± 5.49`, min `67.25%`, max `83.38%`
+  - comparaison E10 (`threshold` précédent): moyenne `-4.08 pts`, max `-4.00 pts`, min `-1.00 pt`
+- conclusion:
+  - le seuil `0.71` améliore le cas ciblé seed `45` mais dégrade la performance globale multi-seeds
+  - ce réglage n'est pas retenu comme nouveau défaut.
 
 Condition d'initialisation obligatoire (I1) :
 - Pour éviter la dégénérescence en haute dimension, imposer

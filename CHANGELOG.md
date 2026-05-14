@@ -7,6 +7,11 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 ## [Non publié]
 
 ### Modifié - 2026-05-14
+- Recalibrage du trigger level-recovery sur protocole `n_samples=3200` :
+  - `max_train_accuracy_to_trigger` ajusté à `0.71` dans `experiments/seedwise_coupling_diagnostics.py`
+  - test ciblé seeds `42`/`45`: trigger confirmé sur seed `45` (score `68.88%`), pas de trigger sur seed `42` (score `77.63%`)
+  - campagne complète couplée seeds `42..46`: `74.68% ± 5.49`, min `67.25%`, max `83.38%`
+  - comparaison à E10 (`78.75% ± 7.63`): régression moyenne `-4.08 pts`; seuil `0.71` non retenu comme configuration par défaut.
 - Campagne seed-wise `coupled_tuned` étendue à `n_samples=3200` (seeds `42..46`) :
   - résultat global: `78.75% ± 7.63`, min `68.25%`, max `87.38%`
   - gain net vs E8 (`n_samples=1200`): moyenne `+7.95 pts`, min `+7.58 pts`
