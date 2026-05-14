@@ -7,6 +7,10 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 ## [Non publié]
 
 ### Modifié - 2026-05-14
+- Recovery level-aware: correction de design du streak dans `haml/training/trainer.py` :
+  - le streak de blocage niveau est désormais accumulé indépendamment des gates globales (`divergence`, `train_accuracy`)
+  - les gates globales contrôlent uniquement le déclenchement effectif du recovery
+  - effet visé: éviter les déclenchements trop tardifs dus à une fenêtre de gate intermittente.
 - Ajout d'un garde-fou level-aware en entraînement (`haml/training/config.py`, `haml/training/trainer.py`) :
   - nouveau `LevelRecoveryConfig` (stagnation near-chance en phase 3)
   - déclenchement borné: phase 3 + divergence minimale + budget de déclenchement
@@ -26,6 +30,23 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
   - ajout d'un sous-test `B2` avec résultats multi-seeds consolidés (`n_runs=5`)
   - chiffres documentés : indépendant `67.30% ± 4.37`, couplé `71.20% ± 6.43`, delta `+3.90 pts`
   - lien explicite entre instabilité observée en `B2` et réponse méthodologique `E7/E8`.
+- Instrumentation mécanistique niveau-aware ajoutée dans `HAMLTrainer` (`haml/training/trainer.py`) :
+  - nouvel historique `level_attractor_diagnostics` par epoch et par niveau
+  - métriques exportées: `intra_spread_mean/min/max`, `inter_centroid_dist_min/mean`, `separation_ratio`.
+- Script de diagnostic ciblé ajouté `experiments/analyze_seedwise_collapse.py` :
+  - lecture des traces seed-wise et isolation des niveaux bloqués en phase 3
+  - timeline mécanistique consolidée (`level_divergence`, `mu_sep`, `lr`, `level_acc`, géométrie attracteurs).
+- Run de contrôle mécanistique `coupled_tuned` sur seeds `42..43` (`n_samples=1200`) :
+  - seed `42`: `69.0%` test, niveau `L1` bloqué proche hasard en phase 3 (`max streak=12`), `L2` également stagnant
+  - seed `43`: `75.0%` test, `L1` apprend (`0.669` final) alors que `L2` reste proche hasard
+  - conclusion opérationnelle: le run dégradé est corrélé à un blocage de niveau intermédiaire en phase 3 (pas seulement à une cascade LR).
+- Patch cause-oriented de récupération niveau (`haml/training/trainer.py`, `haml/training/config.py`) :
+  - récupération locale changée: re-anchor supervisé sur prototypes de classe en espace latent du niveau
+  - ajout d'une atténuation top-down temporaire post-recovery (`td_cooldown_epochs`, `td_scale_during_cooldown`)
+  - réglage par défaut conservateur: `td_cooldown_epochs=1`, `td_scale_during_cooldown=0.7`.
+- Contrôle seed `42` post-patch causale (`experiments/diag_seed42_post_patch.json`) :
+  - déblocage mécanique de `L1` confirmé en phase 3 (`0.500 -> 0.602 -> 0.644` juste après recovery)
+  - accuracy test du run de contrôle: `65.0%` (effet mécanique validé, calibration performance à consolider en multi-seeds).
 
 - Ajout d'un script de diagnostic seed-wise dédié `experiments/seedwise_coupling_diagnostics.py`:
   - export JSON par seed des traces `level_divergence`, `mu_sep`, `lr`, `level_accuracy`

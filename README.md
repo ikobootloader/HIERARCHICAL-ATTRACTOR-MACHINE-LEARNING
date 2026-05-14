@@ -376,6 +376,10 @@ Interprétation :
 Sous-test E7 - Diagnostic seed-wise + patch anti-cascade LR :
 - script dédié: `experiments/seedwise_coupling_diagnostics.py`
 - traces exportées par seed: `level_divergence`, `mu_sep`, `lr`, `level_accuracy`, états attracteurs
+- ajout de traces géométriques par niveau: `level_attractor_diagnostics`
+  (`intra_spread_mean`, `inter_centroid_dist_min`, `separation_ratio`)
+- script d'analyse mécanistique: `experiments/analyze_seedwise_collapse.py`
+  (isolation des niveaux bloqués en phase 3 avec timeline `div/lr/mu_sep/level_acc/separation_ratio`)
 - seeds testées: `42..46`, `n_samples=1200`
 - constat stable avant patch:
   - un niveau reste fréquemment proche du hasard en fin de run (`level_acc ~ 0.500`)
@@ -390,6 +394,9 @@ Sous-test E7 - Diagnostic seed-wise + patch anti-cascade LR :
   - indépendant: `59.73% ± 5.93`
   - delta moyen couplé(après) - indépendant: `+9.60 points`
 - run dégradé toujours présent (seed `42`), mais queue basse légèrement réduite
+- commande de diagnostic mécanistique ciblé (`42..43`) :
+  - `python experiments/seedwise_coupling_diagnostics.py --mode coupled_tuned --base-seed 42 --n-runs 2 --n-samples 1200 --json-out experiments/diag_seed42_43_mechanistic.json`
+  - `python experiments/analyze_seedwise_collapse.py --input-json experiments/diag_seed42_43_mechanistic.json`
 
 Sous-test E8 - Garde-fou level-aware (phase 3 uniquement) :
 - objectif: traiter les runs où un niveau reste proche du hasard (`~0.500`) en phase couplée active
@@ -403,6 +410,17 @@ Sous-test E8 - Garde-fou level-aware (phase 3 uniquement) :
 - point clé:
   - seed `42` passe de `-11.67 pts` (couplé vs indép.) à `+0.67 pt`
   - les seeds forts restent positifs; légère baisse sur seed `46` (`-2.00 pts` vs baseline couplée)
+
+Sous-test E9 - Patch cause-oriented (déblocage L1 en phase 3) :
+- diagnostic mécanique seed `42` (phase 3, avant patch) :
+  - `L1` reste au hasard pendant `12` epochs (streak), malgré couplage actif
+  - `separation_ratio` non nul (`~0.15 -> ~0.26`) : blocage d'apprentissage plutôt qu'effondrement géométrique total
+- correctif implémenté dans `HAMLTrainer` :
+  - re-anchor supervisé du niveau bloqué sur prototypes de classe en espace latent de niveau
+  - atténuation top-down temporaire après recovery (`td_cooldown_epochs`, `td_scale_during_cooldown`)
+- contrôle seed `42` (run unitaire post-patch) :
+  - `L1` se débloque immédiatement après recovery (`0.500 -> 0.602 -> 0.644`)
+  - test run observé : `65.0%` (amélioration mécanique confirmée, calibration perf encore à stabiliser)
 
 Condition d'initialisation obligatoire (I1) :
 - Pour éviter la dégénérescence en haute dimension, imposer
