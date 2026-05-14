@@ -541,4 +541,5 @@ haml/
 *Spécification théorique v2.0 — consolidée après analyse complète de Q1–Q4.
 Les quatre propositions (§3–§6) constituent la base théorique d'une contribution publiable.*
 
-*Projet intitié par curiosité - FM*
+*Projet intitié par curiosité après la lecture deu livre "Le chaos, la complexité et l'émergence de la vie de John Gribbin"
+- FM*
