@@ -110,6 +110,13 @@ $$\mathcal{L} = \mathcal{L}_{CE} + \mu_1 \mathcal{L}_{sep} + \mu_2 \mathcal{L}_{
 ## Résultats et campagnes de test
 
 Pour améliorer la lisibilité, les résultats sont segmentés par campagnes de tests reproductibles.
+Note organisation (2026-05-15) :
+- Les artefacts historiques volumineux (`.json/.log/.txt`) ont été archivés dans `experiments/_archive_results_2026-05-15`.
+- Les scripts de campagne restent inchangés et régénèrent les sorties standard dans `experiments/`.
+- Les baselines actives conservées en clair dans `experiments/` :
+  - `diag_seed42_46_n3200_diffgate_mutex.json`
+  - `diag_noisy_moons_seed42_46_n3200_diffgate_mutex.json`
+  - `diag_make_classification_seed42_46_n3200_diffgate_mutex.json`
 
 ### Index rapide des campagnes
 

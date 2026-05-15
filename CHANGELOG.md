@@ -7,6 +7,19 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 ## [Non publié]
 
 ### Modifié - 2026-05-15
+- Nettoyage des artefacts d'expériences pour réduire le bruit opérationnel dans `github_app/experiments` :
+  - conservation en clair des baselines actives :
+    - `diag_seed42_46_n3200_diffgate_mutex.json`
+    - `diag_noisy_moons_seed42_46_n3200_diffgate_mutex.json`
+    - `diag_make_classification_seed42_46_n3200_diffgate_mutex.json`
+  - archivage réversible des anciens artefacts (`.json/.log/.txt/.md`) vers :
+    - `experiments/_archive_results_2026-05-15/`
+- Dédoublonnage du workspace au profit de `github_app` :
+  - déplacement des anciennes copies racine (`haml`, `experiments`, `v1`, scripts legacy) vers :
+    - `_archive_legacy_2026-05-15/`
+  - objectif : une seule base active du modèle, sans perte d'historique.
+
+### Modifié - 2026-05-15
 - Extension minimale de `experiments/seedwise_coupling_diagnostics.py` :
   - ajout d'un sélecteur `--dataset` pour réutiliser le même protocole et le même format JSON sur plusieurs distributions;
   - jeux supportés: `concentric`, `noisy_moons`, `make_classification`.
