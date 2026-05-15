@@ -65,7 +65,8 @@ class LevelRecoveryConfig:
     patience: int = 3
     max_triggers: int = 1
     require_divergence: float = 0.10
-    max_train_accuracy_to_trigger: float = 0.65
+    other_levels_strong_threshold: float = 0.65
+    min_epochs_remaining_to_trigger: int = 3
     mu_sep_boost: float = 1.2
     lr_factor: float = 0.8
     jitter_std: float = 0.05

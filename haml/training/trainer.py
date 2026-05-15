@@ -311,7 +311,8 @@ class HAMLTrainer:
                 if (
                     stuck_level_idx is not None
                     and level_div >= self.level_recovery_config.require_divergence
-                    and accuracy <= self.level_recovery_config.max_train_accuracy_to_trigger
+                    and self._other_levels_are_strong(level_accuracy, stuck_level_idx)
+                    and self._has_time_for_recovery(epoch)
                 ):
                     self._apply_level_recovery(stuck_level_idx, X_train_t, y_train_t)
                     level_recovery_triggers += 1
@@ -470,6 +471,19 @@ class HAMLTrainer:
                 stuck_level_idx = idx
                 lowest_acc = acc
         return stuck_level_idx
+
+    def _other_levels_are_strong(self, level_accuracy, stuck_level_idx):
+        """Check differential gate: other levels learn while one level is stuck."""
+        other_acc = [acc for idx, acc in enumerate(level_accuracy) if idx != stuck_level_idx]
+        if not other_acc:
+            return False
+        mean_other_acc = sum(other_acc) / len(other_acc)
+        return mean_other_acc >= self.level_recovery_config.other_levels_strong_threshold
+
+    def _has_time_for_recovery(self, epoch):
+        """Avoid late triggers when too few epochs remain to have useful effect."""
+        epochs_remaining = int(self.phase_config.n_epochs) - int(epoch + 1)
+        return epochs_remaining >= int(self.level_recovery_config.min_epochs_remaining_to_trigger)
 
     def _apply_level_recovery(self, level_idx, X_train_t, y_train_t):
         """Re-anchor localement un niveau bloque sur des prototypes supervises."""
