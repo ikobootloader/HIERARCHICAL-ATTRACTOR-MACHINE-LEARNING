@@ -458,6 +458,20 @@ Sous-test E10c - Recalibrage de gate `max_train_accuracy_to_trigger=0.71` :
   - le seuil `0.71` améliore le cas ciblé seed `45` mais dégrade la performance globale multi-seeds
   - ce réglage n'est pas retenu comme nouveau défaut.
 
+Validation cross-dataset (baseline mutex figée) :
+- Protocole: seeds `42..46`, `n_samples=3200`, même runner seed-wise, même format JSON.
+- `noisy_moons` (`noise=0.30`) :
+  - scores: `88.12%`, `91.00%`, `89.88%`, `86.25%`, `90.38%`
+  - agrégé: `89.13% ± 1.73`, min `86.25%`
+  - lecture: transfert très stable sur frontières non convexes 2D.
+- `make_classification` (`4` classes, features redondantes) :
+  - scores: `79.38%`, `75.50%`, `76.88%`, `71.50%`, `67.12%`
+  - agrégé: `74.08% ± 4.31`, min `67.12%`
+  - lecture: transfert partiel sur régime plus difficile, variance maîtrisée mais borne basse plus faible.
+- Fichiers:
+  - `experiments/diag_noisy_moons_seed42_46_n3200_diffgate_mutex.json`
+  - `experiments/diag_make_classification_seed42_46_n3200_diffgate_mutex.json`
+
 Condition d'initialisation obligatoire (I1) :
 - Pour éviter la dégénérescence en haute dimension, imposer
   `sigma_init^(l) = sqrt(d_l) * sigma_data^(l)`.

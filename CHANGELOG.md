@@ -6,6 +6,22 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 
 ## [Non publié]
 
+### Modifié - 2026-05-15
+- Extension minimale de `experiments/seedwise_coupling_diagnostics.py` :
+  - ajout d'un sélecteur `--dataset` pour réutiliser le même protocole et le même format JSON sur plusieurs distributions;
+  - jeux supportés: `concentric`, `noisy_moons`, `make_classification`.
+- Baseline de stabilisation figée dans `haml/training/config.py` :
+  - nouveau paramètre `StabilityConfig.skip_lr_decay_if_recovery_triggered=True`
+  - objectif: officialiser le mutex intra-epoch (pas de double réduction LR quand `level-recovery` et `stability` se chevauchent).
+- Validation transfert `noisy_moons` (`noise=0.30`, seeds `42..46`, `n_samples=3200`) :
+  - scores test: `88.12%`, `91.00%`, `89.88%`, `86.25%`, `90.38%`
+  - agrégé: `mean=89.13%`, `std=1.73`, `min=86.25%`, `max=91.00%`
+  - sortie: `github_app/experiments/diag_noisy_moons_seed42_46_n3200_diffgate_mutex.json`.
+- Validation transfert `make_classification` (`4` classes, features redondantes, seeds `42..46`, `n_samples=3200`) :
+  - scores test: `79.38%`, `75.50%`, `76.88%`, `71.50%`, `67.12%`
+  - agrégé: `mean=74.08%`, `std=4.31`, `min=67.12%`, `max=79.38%`
+  - sortie: `github_app/experiments/diag_make_classification_seed42_46_n3200_diffgate_mutex.json`.
+
 ### Modifié - 2026-05-14
 - Recalibrage du trigger level-recovery sur protocole `n_samples=3200` :
   - `max_train_accuracy_to_trigger` ajusté à `0.71` dans `experiments/seedwise_coupling_diagnostics.py`
