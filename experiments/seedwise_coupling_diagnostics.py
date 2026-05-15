@@ -18,6 +18,7 @@ import time
 
 import numpy as np
 import torch
+from sklearn.datasets import make_classification, make_moons
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
@@ -67,6 +68,39 @@ def make_concentric_alternating(
 
     X = np.vstack(X_parts)
     y = np.concatenate(y_parts)
+    return X, y
+
+
+def make_noisy_moons_dataset(
+    n_samples=3200,
+    noise=0.30,
+    seed=42,
+):
+    X, y = make_moons(n_samples=n_samples, noise=noise, random_state=seed)
+    return X, y
+
+
+def make_classification_dataset(
+    n_samples=3200,
+    n_classes=4,
+    n_features=12,
+    n_informative=6,
+    n_redundant=4,
+    class_sep=1.0,
+    seed=42,
+):
+    X, y = make_classification(
+        n_samples=n_samples,
+        n_features=n_features,
+        n_informative=n_informative,
+        n_redundant=n_redundant,
+        n_repeated=0,
+        n_classes=n_classes,
+        n_clusters_per_class=1,
+        weights=None,
+        class_sep=class_sep,
+        random_state=seed,
+    )
     return X, y
 
 
@@ -233,9 +267,23 @@ def train_configured_model(X_train, y_train, mode, seed):
     raise ValueError(f"Unsupported mode: {mode}")
 
 
-def run_seed(seed, n_samples, mode):
+def run_seed(seed, n_samples, mode, dataset, moons_noise):
     set_seed(seed)
-    X, y = make_concentric_alternating(n_samples=n_samples, seed=seed)
+    if dataset == "concentric":
+        X, y = make_concentric_alternating(n_samples=n_samples, seed=seed)
+    elif dataset == "noisy_moons":
+        X, y = make_noisy_moons_dataset(
+            n_samples=n_samples,
+            noise=moons_noise,
+            seed=seed,
+        )
+    elif dataset == "make_classification":
+        X, y = make_classification_dataset(
+            n_samples=n_samples,
+            seed=seed,
+        )
+    else:
+        raise ValueError(f"Unsupported dataset: {dataset}")
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.25, random_state=seed, stratify=y
     )
@@ -250,6 +298,7 @@ def run_seed(seed, n_samples, mode):
 
     return {
         "seed": int(seed),
+        "dataset": dataset,
         "mode": mode,
         "n_samples": int(n_samples),
         "test_accuracy": float(test_acc),
@@ -271,6 +320,12 @@ def run_seed(seed, n_samples, mode):
 def parse_args():
     parser = argparse.ArgumentParser(description="Seed-wise coupling diagnostics.")
     parser.add_argument("--mode", choices=["independent", "coupled_tuned"], default="coupled_tuned")
+    parser.add_argument(
+        "--dataset",
+        choices=["concentric", "noisy_moons", "make_classification"],
+        default="concentric",
+    )
+    parser.add_argument("--moons-noise", type=float, default=0.30)
     parser.add_argument("--base-seed", type=int, default=42)
     parser.add_argument("--n-runs", type=int, default=5)
     parser.add_argument("--n-samples", type=int, default=3200)
@@ -287,10 +342,20 @@ def main():
     seeds = [args.base_seed + i for i in range(args.n_runs)]
     runs = []
     for seed in seeds:
-        print(f"\n=== Seed {seed} ({args.mode}) ===")
-        runs.append(run_seed(seed=seed, n_samples=args.n_samples, mode=args.mode))
+        print(f"\n=== Seed {seed} ({args.mode}, dataset={args.dataset}) ===")
+        runs.append(
+            run_seed(
+                seed=seed,
+                n_samples=args.n_samples,
+                mode=args.mode,
+                dataset=args.dataset,
+                moons_noise=args.moons_noise,
+            )
+        )
 
     summary = {
+        "dataset": args.dataset,
+        "moons_noise": float(args.moons_noise) if args.dataset == "noisy_moons" else None,
         "mode": args.mode,
         "seeds": seeds,
         "n_samples": int(args.n_samples),
