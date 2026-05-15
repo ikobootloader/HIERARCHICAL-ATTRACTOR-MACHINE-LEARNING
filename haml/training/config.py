@@ -25,6 +25,10 @@ class StabilityConfig:
     phase3_only: bool = True
     lr_decay_cooldown_epochs: int = 2
     max_lr_decay_events: int = 4
+    # Baseline officielle:
+    # si un level-recovery vient de se declencher, on inhibe le lr-decay
+    # de stabilite sur ce meme epoch pour eviter un double écrasement du LR.
+    skip_lr_decay_if_recovery_triggered: bool = True
 
 
 @dataclass

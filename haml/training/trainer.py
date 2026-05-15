@@ -84,6 +84,7 @@ class HAMLTrainer:
             'lr': [],
             'mu_sep': [],
             'level_attractor_diagnostics': [],
+            'events': [],
         }
 
         # Sauvegarde des alphas originaux
@@ -139,6 +140,7 @@ class HAMLTrainer:
         collapse_guard_applied = False
         prev_level_div = None
         for epoch in range(self.phase_config.n_epochs):
+            recovery_triggered_this_epoch = False
             # DÃ©termination de la phase
             if epoch < self.phase_config.phase1_epochs:
                 phase = 1
@@ -314,6 +316,7 @@ class HAMLTrainer:
                     and self._other_levels_are_strong(level_accuracy, stuck_level_idx)
                     and self._has_time_for_recovery(epoch)
                 ):
+                    lr_before_recovery = float(self.optimizer.get_lr())
                     self._apply_level_recovery(stuck_level_idx, X_train_t, y_train_t)
                     level_recovery_triggers += 1
                     level_recovery_td_cooldown = max(
@@ -330,10 +333,25 @@ class HAMLTrainer:
 
                     new_lr = max(
                         self.stability_config.min_lr,
-                        self.optimizer.get_lr() * self.level_recovery_config.lr_factor,
+                        lr_before_recovery * self.level_recovery_config.lr_factor,
                     )
                     self.optimizer.set_lr(new_lr)
                     level_recovery_streak = [0 for _ in range(len(self.model.levels))]
+                    recovery_triggered_this_epoch = True
+                    self.history['events'].append(
+                        {
+                            'type': 'level_recovery',
+                            'epoch': int(epoch + 1),
+                            'level_idx': int(stuck_level_idx),
+                            'level_accuracy': float(level_accuracy[stuck_level_idx]),
+                            'level_divergence': float(level_div),
+                            'lr_before': lr_before_recovery,
+                            'lr_after': float(new_lr),
+                            'mutex_prevented_stability_decay': bool(
+                                self.stability_config.skip_lr_decay_if_recovery_triggered
+                            ),
+                        }
+                    )
                     if self.verbose:
                         print(
                             f"[level-recovery] epoch={epoch+1}, level={stuck_level_idx}, "
@@ -373,16 +391,34 @@ class HAMLTrainer:
             stability_phase_ok = (not self.stability_config.phase3_only) or (phase == 3)
             cooldown_ok = (epoch - last_lr_decay_epoch) >= self.stability_config.lr_decay_cooldown_epochs
             decay_budget_ok = lr_decay_events < self.stability_config.max_lr_decay_events
-            if level_div > self.stability_config.level_divergence_threshold and stability_phase_ok:
+            if (
+                level_div > self.stability_config.level_divergence_threshold
+                and stability_phase_ok
+                and (
+                    (not self.stability_config.skip_lr_decay_if_recovery_triggered)
+                    or (not recovery_triggered_this_epoch)
+                )
+            ):
                 divergence_streak += 1
                 if cooldown_ok and decay_budget_ok:
+                    lr_before_stability = float(self.optimizer.get_lr())
                     new_lr = max(
                         self.stability_config.min_lr,
-                        self.optimizer.get_lr() * self.stability_config.lr_decay_on_divergence,
+                        lr_before_stability * self.stability_config.lr_decay_on_divergence,
                     )
                     self.optimizer.set_lr(new_lr)
                     lr_decay_events += 1
                     last_lr_decay_epoch = epoch
+                    self.history['events'].append(
+                        {
+                            'type': 'stability_lr_decay',
+                            'epoch': int(epoch + 1),
+                            'level_divergence': float(level_div),
+                            'lr_before': lr_before_stability,
+                            'lr_after': float(new_lr),
+                            'event_index': int(lr_decay_events),
+                        }
+                    )
                     if self.verbose:
                         print(
                             f"[stability] level_div={level_div:.3f} > "
