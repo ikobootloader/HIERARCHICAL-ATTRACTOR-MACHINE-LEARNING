@@ -141,6 +141,7 @@ def main():
     parser.add_argument("--n-epochs", type=int, default=10)
     parser.add_argument("--phase1-epochs", type=int, default=2)
     parser.add_argument("--phase2-epochs", type=int, default=3)
+    parser.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto")
     parser.add_argument(
         "--json-out",
         type=str,
@@ -161,7 +162,7 @@ def main():
         n_epochs=args.n_epochs,
         batch_size=128,
         train_on_fit=False,
-        device="cpu",
+        device=args.device,
     )
     model.fit(X_train, y_train)
     trainer = build_trainer(model, args.n_epochs, args.phase1_epochs, args.phase2_epochs)
