@@ -137,6 +137,7 @@ def phase_accuracy(history, phase1_epochs, phase2_epochs):
 def main():
     parser = argparse.ArgumentParser(description="Fashion-MNIST short probe with recovery diagnostics.")
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--mode", choices=["coupled_tuned", "independent"], default="coupled_tuned")
     parser.add_argument("--n-train", type=int, default=5000)
     parser.add_argument("--n-test", type=int, default=1000)
     parser.add_argument("--n-epochs", type=int, default=10)
@@ -163,6 +164,11 @@ def main():
     phase1_epochs = max(0, min(args.phase1_epochs, args.n_epochs))
     phase2_epochs = max(0, min(args.phase2_epochs, max(0, args.n_epochs - phase1_epochs)))
 
+    if args.mode == "independent":
+        alpha_bu, alpha_td = 0.0, 0.0
+    else:
+        alpha_bu, alpha_td = 0.5, 1.5
+
     set_seed(args.seed)
     X_train, X_test, y_train, y_test = load_fashion_mnist_subset(args.n_train, args.n_test, args.seed)
 
@@ -170,8 +176,8 @@ def main():
         n_levels=3,
         level_dims=list(args.level_dims) if args.level_dims is not None else None,
         n_attractors_per_class=2,
-        alpha_bu=0.5,
-        alpha_td=1.5,
+        alpha_bu=alpha_bu,
+        alpha_td=alpha_td,
         max_steps=args.max_steps,
         tol=args.tol,
         lr=0.01,
