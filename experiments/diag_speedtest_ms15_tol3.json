@@ -8,7 +8,7 @@
   "phase2_epochs": 1,
   "phase3_epochs": 0,
   "test_accuracy": 0.72,
-  "train_time_sec": 1023.7002515792847,
+  "train_time_sec": 241.0425431728363,
   "phase_accuracy": {
     "phase1_end_train_accuracy": 0.7164,
     "phase2_end_train_accuracy": 0.7364,
