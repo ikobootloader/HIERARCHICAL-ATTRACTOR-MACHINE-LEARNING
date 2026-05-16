@@ -143,6 +143,14 @@ def main():
     parser.add_argument("--phase2-epochs", type=int, default=3)
     parser.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto")
     parser.add_argument(
+        "--level-dims",
+        type=int,
+        nargs=2,
+        metavar=("D1", "D2"),
+        default=None,
+        help="Optional explicit hidden dimensions, e.g. --level-dims 64 32",
+    )
+    parser.add_argument(
         "--json-out",
         type=str,
         default="github_app/experiments/diag_fashion_mnist_seed42_n5000_e10_mutex.json",
@@ -154,6 +162,7 @@ def main():
 
     model = HAML(
         n_levels=3,
+        level_dims=list(args.level_dims) if args.level_dims is not None else None,
         n_attractors_per_class=2,
         alpha_bu=0.5,
         alpha_td=1.5,
