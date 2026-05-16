@@ -23,6 +23,19 @@ from ..training import (
 from ..training.trainer import HAMLTrainer
 
 
+def _resolve_device(device):
+    """Resolve runtime device with safe fallback."""
+    if device is None:
+        device = "auto"
+    d = str(device).lower().strip()
+    if d == "auto":
+        return "cuda" if torch.cuda.is_available() else "cpu"
+    if d == "cuda" and not torch.cuda.is_available():
+        print("Requested device='cuda' but CUDA is unavailable. Falling back to CPU.")
+        return "cpu"
+    return d
+
+
 class HAML(nn.Module, BaseEstimator, ClassifierMixin):
     """
     Hierarchical Attractor Machine Learning.
@@ -60,7 +73,7 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
         batch_size=32,
         train_on_fit=False,
         level_score_weighting='exponential',
-        device='cpu'
+        device='auto'
     ):
         """
         Args:
@@ -81,14 +94,14 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
             learn_projections (bool): Affiner projections PCA
             learn_alphas (bool): Apprendre α_bu, α_td
             level_score_weighting (str): 'uniform' ou 'exponential'
-            device (str): 'cpu' ou 'cuda'
+            device (str): 'auto', 'cpu' ou 'cuda'
         """
         super().__init__()
 
         self.n_levels = n_levels
         self.level_dims = level_dims
         self.n_attractors_per_class = n_attractors_per_class
-        self.device = device
+        self.device = _resolve_device(device)
 
         # Hyperparamètres stockés (pour scikit-learn)
         self.alpha_bu = alpha_bu
