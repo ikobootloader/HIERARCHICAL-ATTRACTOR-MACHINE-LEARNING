@@ -441,6 +441,15 @@ Résultats observés :
 - Événements de stabilisation/recovery : aucun trigger (`events=[]`), run naturellement stable.
 - Coût : `6979s` (~`1h56`) pour 10 epochs sur ce sous-ensemble.
 
+Confirmation Kaggle (reproductibilité inter-environnements) :
+- Même protocole reproduit sur Kaggle GPU :
+  - accuracy test : `80.1%` (identique)
+  - accuracy train finale : `82.3%` (identique)
+  - temps total : `6222s` (~`1h44`)
+- Lecture :
+  - comportement stable et déterministe sur `seed=42`
+  - coût compute toujours élevé malgré un runtime légèrement plus rapide que Colab.
+
 Test de réduction dimensionnelle (levier vitesse) :
 - Variante testée : `784 -> 64 -> 32` (même protocole, même seed, même budget epochs)
 - Résultat :
