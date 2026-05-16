@@ -6,6 +6,17 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 
 ## [Non publié]
 
+### Modifié - 2026-05-16
+- Validation réelle ajoutée sur Fashion-MNIST via `experiments/fashion_mnist_short_probe.py` :
+  - protocole: seed `42`, `n_train=5000`, `n_test=1000`, `10` epochs, phases `(2,3,5)`
+  - résultat: accuracy test `80.1%`, accuracy train finale `82.3%`
+  - progression de phase: `75.36%` -> `78.86%` -> `82.26%`
+  - stabilité: aucun trigger recovery/stability (`events=[]`), divergence inter-niveaux faible.
+- Compatibilité de lancement GPU améliorée:
+  - ajout de l'option `--device {auto,cpu,cuda}` dans
+    `experiments/mnist_short_probe.py` et `experiments/fashion_mnist_short_probe.py`
+  - résolution de device `auto` dans `haml/model/haml.py` (CUDA si disponible, sinon CPU).
+
 ### Modifié - 2026-05-15
 - Nettoyage des artefacts d'expériences pour réduire le bruit opérationnel dans `github_app/experiments` :
   - conservation en clair des baselines actives :

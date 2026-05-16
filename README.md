@@ -127,6 +127,7 @@ Note organisation (2026-05-15) :
 | C (Bruité) | Évaluer robustesse au bruit (`make_moons`) | `experiments/noisy_benchmark.py` | Courbe du delta couplé-vs-indép. selon bruit |
 | D (SA-nODE-reimpl) | Comparaison architecturale contrôlée hiérarchie vs plat | `experiments/noisy_sanode_comparison.py`, `experiments/tune_sanode_reimpl.py` | Accuracy HAML couplé vs SA-nODE-reimpl |
 | E (Stabilisation) | Stabiliser les gains couplés forts sur concentrique | `experiments/concentric_coupling_ablation.py`, `experiments/seedwise_coupling_diagnostics.py` | E10c (`thr=0.71`): `74.68% ± 5.49`, min `67.25%` |
+| F (Fashion-MNIST) | Validation réelle haute dimension (784D, 10 classes) | `experiments/fashion_mnist_short_probe.py` | seed 42: test `80.1%` (10 epochs, n_train=5000) |
 
 ### Campagne A - MNIST subset (1500/500, 5 epochs)
 
@@ -417,6 +418,36 @@ Sous-test E8 - Garde-fou level-aware (phase 3 uniquement) :
 - point clé:
   - seed `42` passe de `-11.67 pts` (couplé vs indép.) à `+0.67 pt`
   - les seeds forts restent positifs; légère baisse sur seed `46` (`-2.00 pts` vs baseline couplée)
+
+### Campagne F - Validation réelle sur Fashion-MNIST (Colab)
+
+Objectif :
+- Vérifier la stabilité et la progression du protocole 3 phases sur données réelles haute dimension (`784D`, `10` classes).
+
+Protocole :
+- Dataset : Fashion-MNIST (`n_train=5000`, `n_test=1000`)
+- Seed : `42`
+- Entraînement : `10` epochs, phases `(2,3,5)`
+- Config recovery : seuil différentiel multi-classes (`other_levels_strong_threshold=0.20`), détection blocage calibrée `chance + epsilon = 0.22`.
+
+Résultats observés :
+- Accuracy train finale : `82.3%`
+- Accuracy test : `80.1%`
+- Progression de phase :
+  - fin phase 1 : `75.36%`
+  - fin phase 2 : `78.86%`
+  - fin phase 3 : `82.26%`
+- Accuracy niveaux en phase 3 : progression conjointe (`~0.79 -> ~0.82`) avec divergence inter-niveaux faible (`level_div` proche de `0`).
+- Événements de stabilisation/recovery : aucun trigger (`events=[]`), run naturellement stable.
+- Coût : `6979s` (~`1h56`) pour 10 epochs sur ce sous-ensemble.
+
+Signification :
+- Validation positive du comportement du modèle sur données réelles (pas uniquement synthétiques).
+- La stratégie 3 phases reste cohérente en `784D` et multi-classes sans instabilité apparente.
+- Le verrou principal devient l'infrastructure de calcul (temps), plus que la stabilité algorithmique sur ce protocole.
+
+Commande de reproduction (Colab GPU) :
+- `PYTHONIOENCODING=utf-8 python experiments/fashion_mnist_short_probe.py --device cuda --seed 42 --n-train 5000 --n-test 1000 --n-epochs 10 --phase1-epochs 2 --phase2-epochs 3 --json-out experiments/diag_fashion_mnist_seed42_n5000_e10_mutex.json`
 
 Sous-test E9 - Patch cause-oriented (déblocage L1 en phase 3) :
 - diagnostic mécanique seed `42` (phase 3, avant patch) :
