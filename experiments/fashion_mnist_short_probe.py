@@ -123,9 +123,10 @@ def build_trainer(model, n_epochs, phase1_epochs, phase2_epochs):
 
 
 def phase_accuracy(history, phase1_epochs, phase2_epochs):
-    idx_p1 = phase1_epochs - 1
-    idx_p2 = phase1_epochs + phase2_epochs - 1
-    idx_p3 = len(history["accuracy"]) - 1
+    n = len(history["accuracy"])
+    idx_p1 = max(0, min(phase1_epochs - 1, n - 1))
+    idx_p2 = max(0, min(phase1_epochs + phase2_epochs - 1, n - 1))
+    idx_p3 = max(0, n - 1)
     return {
         "phase1_end_train_accuracy": float(history["accuracy"][idx_p1]),
         "phase2_end_train_accuracy": float(history["accuracy"][idx_p2]),
@@ -159,6 +160,8 @@ def main():
         default="github_app/experiments/diag_fashion_mnist_seed42_n5000_e10_mutex.json",
     )
     args = parser.parse_args()
+    phase1_epochs = max(0, min(args.phase1_epochs, args.n_epochs))
+    phase2_epochs = max(0, min(args.phase2_epochs, max(0, args.n_epochs - phase1_epochs)))
 
     set_seed(args.seed)
     X_train, X_test, y_train, y_test = load_fashion_mnist_subset(args.n_train, args.n_test, args.seed)
@@ -178,15 +181,15 @@ def main():
         device=args.device,
     )
     model.fit(X_train, y_train)
-    trainer = build_trainer(model, args.n_epochs, args.phase1_epochs, args.phase2_epochs)
+    trainer = build_trainer(model, args.n_epochs, phase1_epochs, phase2_epochs)
 
     start = time.time()
     history = trainer.train(X_train, y_train)
     train_time_sec = time.time() - start
     test_acc = model.score(X_test, y_test)
 
-    phase_metrics = phase_accuracy(history, args.phase1_epochs, args.phase2_epochs)
-    phase3_start = args.phase1_epochs + args.phase2_epochs
+    phase_metrics = phase_accuracy(history, phase1_epochs, phase2_epochs)
+    phase3_start = phase1_epochs + phase2_epochs
     level_accuracy_phase3 = [
         {
             "epoch": int(epoch_idx + 1),
@@ -202,9 +205,9 @@ def main():
         "n_train": int(args.n_train),
         "n_test": int(args.n_test),
         "n_epochs": int(args.n_epochs),
-        "phase1_epochs": int(args.phase1_epochs),
-        "phase2_epochs": int(args.phase2_epochs),
-        "phase3_epochs": int(args.n_epochs - args.phase1_epochs - args.phase2_epochs),
+        "phase1_epochs": int(phase1_epochs),
+        "phase2_epochs": int(phase2_epochs),
+        "phase3_epochs": int(args.n_epochs - phase1_epochs - phase2_epochs),
         "test_accuracy": float(test_acc),
         "train_time_sec": float(train_time_sec),
         "phase_accuracy": phase_metrics,

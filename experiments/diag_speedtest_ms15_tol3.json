@@ -1,0 +1,26 @@
+{
+  "dataset": "fashion_mnist_784",
+  "seed": 42,
+  "n_train": 5000,
+  "n_test": 1000,
+  "n_epochs": 2,
+  "phase1_epochs": 1,
+  "phase2_epochs": 1,
+  "phase3_epochs": 0,
+  "test_accuracy": 0.72,
+  "train_time_sec": 1023.7002515792847,
+  "phase_accuracy": {
+    "phase1_end_train_accuracy": 0.7164,
+    "phase2_end_train_accuracy": 0.7364,
+    "phase3_end_train_accuracy": 0.7364
+  },
+  "level_accuracy_phase3": [],
+  "events": [],
+  "recovery_events": [],
+  "stability_decay_events": [],
+  "level_recovery_config": {
+    "chance_tolerance": 0.12,
+    "stuck_threshold_from_chance": 0.22,
+    "other_levels_strong_threshold": 0.2
+  }
+}
