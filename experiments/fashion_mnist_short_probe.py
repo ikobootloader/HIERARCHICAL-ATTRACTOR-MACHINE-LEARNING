@@ -139,6 +139,9 @@ def main():
     parser.add_argument("--n-train", type=int, default=5000)
     parser.add_argument("--n-test", type=int, default=1000)
     parser.add_argument("--n-epochs", type=int, default=10)
+    parser.add_argument("--batch-size", type=int, default=128)
+    parser.add_argument("--max-steps", type=int, default=40)
+    parser.add_argument("--tol", type=float, default=1e-4)
     parser.add_argument("--phase1-epochs", type=int, default=2)
     parser.add_argument("--phase2-epochs", type=int, default=3)
     parser.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto")
@@ -166,10 +169,11 @@ def main():
         n_attractors_per_class=2,
         alpha_bu=0.5,
         alpha_td=1.5,
-        max_steps=40,
+        max_steps=args.max_steps,
+        tol=args.tol,
         lr=0.01,
         n_epochs=args.n_epochs,
-        batch_size=128,
+        batch_size=args.batch_size,
         train_on_fit=False,
         device=args.device,
     )
