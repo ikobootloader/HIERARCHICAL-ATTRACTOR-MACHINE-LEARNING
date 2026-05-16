@@ -1,23 +1,30 @@
-"""
-Setup script for HAML.
-"""
+"""Setup script for HAML."""
 
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
+
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
-with open("requirements.txt", "r", encoding="utf-8") as fh:
-    requirements = [line.strip() for line in fh if line.strip() and not line.startswith("#")]
+with open("requirements.txt", "r", encoding="utf-8-sig") as fh:
+    requirements = []
+    for raw_line in fh:
+        line = raw_line.strip()
+        if not line:
+            continue
+        if line.lstrip("\ufeff").startswith("#"):
+            continue
+        requirements.append(line)
+
 
 setup(
     name="haml",
     version="0.2.2",
     author="HAML Contributors",
-    description="Hierarchical Attractor Machine Learning - Système de classification par dynamique d'attracteurs",
+    description="Hierarchical Attractor Machine Learning - Systeme de classification par dynamique d'attracteurs",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/haml",
+    url="https://github.com/ikobootloader/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING",
     packages=find_packages(),
     classifiers=[
         "Development Status :: 3 - Alpha",

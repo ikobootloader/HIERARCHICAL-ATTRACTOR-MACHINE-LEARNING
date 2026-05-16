@@ -18,6 +18,11 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
   - déplacement des anciennes copies racine (`haml`, `experiments`, `v1`, scripts legacy) vers :
     - `_archive_legacy_2026-05-15/`
   - objectif : une seule base active du modèle, sans perte d'historique.
+- Correctif packaging `pip` dans `setup.py` :
+  - lecture BOM-safe de `requirements.txt` via `encoding="utf-8-sig"`
+  - filtrage robuste des commentaires en tête de fichier
+  - correction URL du projet vers `ikobootloader/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING`
+  - validation locale: `python setup.py egg_info` OK.
 
 ### Modifié - 2026-05-15
 - Extension minimale de `experiments/seedwise_coupling_diagnostics.py` :
