@@ -12,6 +12,10 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
   - résultat: accuracy test `80.1%`, accuracy train finale `82.3%`
   - progression de phase: `75.36%` -> `78.86%` -> `82.26%`
   - stabilité: aucun trigger recovery/stability (`events=[]`), divergence inter-niveaux faible.
+- Test d'accélération par réduction dimensionnelle documenté (Fashion-MNIST, seed `42`) :
+  - variante `level_dims=[64,32]` vs baseline `784->392->196`
+  - résultat: `77.3%` test vs `80.1%` et temps quasi inchangé (`6872s` vs `6979s`)
+  - conclusion: pas de gain compute exploitable via réduction de dimensions dans ce protocole.
 - Compatibilité de lancement GPU améliorée:
   - ajout de l'option `--device {auto,cpu,cuda}` dans
     `experiments/mnist_short_probe.py` et `experiments/fashion_mnist_short_probe.py`

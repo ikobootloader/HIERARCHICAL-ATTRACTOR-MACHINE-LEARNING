@@ -441,10 +441,26 @@ Résultats observés :
 - Événements de stabilisation/recovery : aucun trigger (`events=[]`), run naturellement stable.
 - Coût : `6979s` (~`1h56`) pour 10 epochs sur ce sous-ensemble.
 
+Test de réduction dimensionnelle (levier vitesse) :
+- Variante testée : `784 -> 64 -> 32` (même protocole, même seed, même budget epochs)
+- Résultat :
+  - test : `77.3%` (vs `80.1%` en `784 -> 392 -> 196`)
+  - temps : `6872s` (vs `6979s`)
+- Lecture :
+  - perte de performance `-2.8 pts` sans gain temps significatif
+  - la réduction `level_dims` n'est pas un levier d'accélération utile dans ce protocole.
+
 Signification :
 - Validation positive du comportement du modèle sur données réelles (pas uniquement synthétiques).
 - La stratégie 3 phases reste cohérente en `784D` et multi-classes sans instabilité apparente.
 - Le verrou principal devient l'infrastructure de calcul (temps), plus que la stabilité algorithmique sur ce protocole.
+- Les leviers simples testés (`max_steps` raisonnable, réduction de dimensions latentes) ne débloquent pas le coût de calcul.
+
+Conséquence pratique :
+- À infrastructure constante, une campagne multi-seeds complète Fashion-MNIST reste coûteuse (ordre de grandeur `~2h/run` sur ce protocole).
+- Deux chemins opérationnels :
+  - assumer une validation réelle en seed unique (`seed=42`) et documenter explicitement la limite compute
+  - migrer vers une infra plus puissante (GPU haut de gamme / HPC) avant campagne complète.
 
 Commande de reproduction (Colab GPU) :
 - `PYTHONIOENCODING=utf-8 python experiments/fashion_mnist_short_probe.py --device cuda --seed 42 --n-train 5000 --n-test 1000 --n-epochs 10 --phase1-epochs 2 --phase2-epochs 3 --json-out experiments/diag_fashion_mnist_seed42_n5000_e10_mutex.json`
