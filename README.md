@@ -2,6 +2,8 @@
 
 Système de classification supervisée basé sur une dynamique d'attracteurs hiérarchiques bidirectionnels.
 
+DOI (archive) : https://doi.org/10.5281/zenodo.20238600
+
 ## Description
 
 HAML implémente un système dynamique multi-échelles où la classification émerge de la convergence vers des bassins d'attraction stables. L'architecture hiérarchique couple des niveaux de représentation de dimensions décroissantes via des flux bidirectionnels (bottom-up et top-down), inspirés du Predictive Coding.

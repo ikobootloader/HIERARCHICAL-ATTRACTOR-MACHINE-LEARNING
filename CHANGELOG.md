@@ -7,6 +7,7 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 ## [Non publié]
 
 ### Modifié - 2026-05-16
+- README: ajout de la référence d'archive Zenodo (DOI) `10.5281/zenodo.20238600`.
 - Validation réelle ajoutée sur Fashion-MNIST via `experiments/fashion_mnist_short_probe.py` :
   - protocole: seed `42`, `n_train=5000`, `n_test=1000`, `10` epochs, phases `(2,3,5)`
   - résultat: accuracy test `80.1%`, accuracy train finale `82.3%`
@@ -20,6 +21,9 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
   - ajout de l'option `--device {auto,cpu,cuda}` dans
     `experiments/mnist_short_probe.py` et `experiments/fashion_mnist_short_probe.py`
   - résolution de device `auto` dans `haml/model/haml.py` (CUDA si disponible, sinon CPU).
+- Paramètres de speed-test exposés dans `experiments/fashion_mnist_short_probe.py` :
+  - ajout des options CLI `--batch-size`, `--max-steps`, `--tol`
+  - objectif : mesurer rapidement l'impact compute (2 epochs) avant lancement de campagnes longues.
 
 ### Modifié - 2026-05-15
 - Nettoyage des artefacts d'expériences pour réduire le bruit opérationnel dans `github_app/experiments` :
