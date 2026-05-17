@@ -452,6 +452,24 @@ Confirmation Kaggle (reproductibilité inter-environnements) :
   - comportement stable et déterministe sur `seed=42`
   - coût compute toujours élevé malgré un runtime légèrement plus rapide que Colab.
 
+Extension multi-seeds (mode `coupled_tuned`, seeds `42,43,44,46`) :
+- Scores test :
+  - seed `42`: `80.1%`
+  - seed `43`: `81.6%`
+  - seed `44`: `80.3%`
+  - seed `46`: `78.8%`
+- Agrégé (4 seeds) :
+  - moyenne : `80.2%`
+  - écart-type : `~1.1%`
+  - minimum : `78.8%`
+- Stabilité :
+  - aucun trigger `recovery`/`stability` observé (`events=[]` sur les runs reportés)
+  - progression 3 phases cohérente sur les 4 seeds.
+- Signal mécanistique à surveiller :
+  - sur seeds `44` et `46`, le niveau `L0` décroche en phase 3 (jusqu'à `~0.74`)
+    alors que `L1/L2` montent vers `~0.81`, avec `level_div` croissante (jusqu'à `~0.075`).
+  - ce pattern reste compensé au niveau test, mais confirme que `L0` est le niveau le plus sensible sous couplage fort.
+
 Test de réduction dimensionnelle (levier vitesse) :
 - Variante testée : `784 -> 64 -> 32` (même protocole, même seed, même budget epochs)
 - Résultat :
