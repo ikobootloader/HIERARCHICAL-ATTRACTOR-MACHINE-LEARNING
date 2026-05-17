@@ -630,6 +630,6 @@ MIT
 
 ## Contact
 
-Voir [CLAUDE.md](CLAUDE.md) pour les directives de développement.
+Frédérick MURAT
 
 
