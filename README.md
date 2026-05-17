@@ -452,23 +452,47 @@ Confirmation Kaggle (reproductibilité inter-environnements) :
   - comportement stable et déterministe sur `seed=42`
   - coût compute toujours élevé malgré un runtime légèrement plus rapide que Colab.
 
-Extension multi-seeds (mode `coupled_tuned`, seeds `42,43,44,46`) :
+Extension multi-seeds (mode `coupled_tuned`, seeds `42..46`) :
 - Scores test :
   - seed `42`: `80.1%`
   - seed `43`: `81.6%`
   - seed `44`: `80.3%`
+  - seed `45`: `80.6%`
   - seed `46`: `78.8%`
-- Agrégé (4 seeds) :
-  - moyenne : `80.2%`
-  - écart-type : `~1.1%`
+- Agrégé (5 seeds) :
+  - moyenne : `80.28%`
+  - écart-type : `~1.0%`
   - minimum : `78.8%`
+  - maximum : `81.6%`
 - Stabilité :
   - aucun trigger `recovery`/`stability` observé (`events=[]` sur les runs reportés)
-  - progression 3 phases cohérente sur les 4 seeds.
+  - progression 3 phases cohérente sur les 5 seeds.
 - Signal mécanistique à surveiller :
   - sur seeds `44` et `46`, le niveau `L0` décroche en phase 3 (jusqu'à `~0.74`)
     alors que `L1/L2` montent vers `~0.81`, avec `level_div` croissante (jusqu'à `~0.075`).
   - ce pattern reste compensé au niveau test, mais confirme que `L0` est le niveau le plus sensible sous couplage fort.
+
+Comparatif final couplé vs indépendant (Fashion-MNIST, seeds `42..46`, `n_train=5000`, `10` epochs) :
+
+| Seed | Couplé | Indépendant | Delta |
+|---|---:|---:|---:|
+| 42 | 80.1% | 80.2% | -0.1 pt |
+| 43 | 81.6% | 81.4% | +0.2 pt |
+| 44 | 80.3% | 80.2% | +0.1 pt |
+| 45 | 80.6% | 80.8% | -0.2 pt |
+| 46 | 78.8% | 78.9% | -0.1 pt |
+| **Moyenne** | **80.28%** | **80.30%** | **-0.02 pt** |
+| **Std** | **±1.00%** | **±0.95%** | |
+
+Conclusion de délimitation (campagne F) :
+- Sur ce protocole, le delta couplé vs indépendant est statistiquement nul.
+- Ce résultat est cohérent avec l'ablation MNIST courte (delta proche de `0`).
+- Interprétation retenue :
+  - soit le protocole (`10` epochs, `2` attracteurs/classe) est trop court pour laisser émerger un gain couplé,
+  - soit Fashion-MNIST n'expose pas la structure topologique où le couplage apporte un avantage net.
+- Positionnement scientifique :
+  - ce n'est pas un échec du modèle, mais une délimitation de domaine d'application du gain couplé,
+  - le bénéfice du couplage apparaît conditionnel à la structure du problème (ambiguïté locale + besoin de contexte global).
 
 Test de réduction dimensionnelle (levier vitesse) :
 - Variante testée : `784 -> 64 -> 32` (même protocole, même seed, même budget epochs)

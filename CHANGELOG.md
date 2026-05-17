@@ -6,6 +6,15 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 
 ## [Non publié]
 
+### Modifié - 2026-05-17
+- Campagne F (Fashion-MNIST) complétée avec comparaison `coupled_tuned` vs `independent` sur seeds `42..46` :
+  - couplé: `80.28% ± 1.00`
+  - indépendant: `80.30% ± 0.95`
+  - delta moyen: `-0.02 pt` (statistiquement nul sur ce protocole).
+- README mis à jour pour expliciter la délimitation :
+  - absence de gain couplé mesurable sur Fashion-MNIST en `10` epochs (`2` attracteurs/classe),
+  - positionné comme condition d'applicabilité (gain couplé dépendant de la structure du problème).
+
 ### Modifié - 2026-05-16
 - README: ajout de la référence d'archive Zenodo (DOI) `10.5281/zenodo.20238600`.
 - Validation réelle ajoutée sur Fashion-MNIST via `experiments/fashion_mnist_short_probe.py` :
