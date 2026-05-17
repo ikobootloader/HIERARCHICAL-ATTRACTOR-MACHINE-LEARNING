@@ -1,0 +1,67 @@
+{
+  "dataset": "fashion_mnist_784",
+  "seed": 44,
+  "n_train": 5000,
+  "n_test": 1000,
+  "n_epochs": 10,
+  "phase1_epochs": 2,
+  "phase2_epochs": 3,
+  "phase3_epochs": 5,
+  "test_accuracy": 0.802,
+  "train_time_sec": 6292.301067113876,
+  "phase_accuracy": {
+    "phase1_end_train_accuracy": 0.7504,
+    "phase2_end_train_accuracy": 0.7964,
+    "phase3_end_train_accuracy": 0.8212
+  },
+  "level_accuracy_phase3": [
+    {
+      "epoch": 6,
+      "level_accuracy": [
+        0.7522000074386597,
+        0.8003999590873718,
+        0.7973999977111816
+      ]
+    },
+    {
+      "epoch": 7,
+      "level_accuracy": [
+        0.7487999796867371,
+        0.7996000051498413,
+        0.7971999645233154
+      ]
+    },
+    {
+      "epoch": 8,
+      "level_accuracy": [
+        0.7429999709129333,
+        0.8009999990463257,
+        0.800599992275238
+      ]
+    },
+    {
+      "epoch": 9,
+      "level_accuracy": [
+        0.7337999939918518,
+        0.8121999502182007,
+        0.8091999888420105
+      ]
+    },
+    {
+      "epoch": 10,
+      "level_accuracy": [
+        0.7265999913215637,
+        0.817799985408783,
+        0.8143999576568604
+      ]
+    }
+  ],
+  "events": [],
+  "recovery_events": [],
+  "stability_decay_events": [],
+  "level_recovery_config": {
+    "chance_tolerance": 0.12,
+    "stuck_threshold_from_chance": 0.22,
+    "other_levels_strong_threshold": 0.2
+  }
+}
