@@ -12,6 +12,10 @@ class PhaseConfig:
     phase1_epochs: int = 15
     phase2_epochs: int = 15
     td_warmup_power: float = 1.0
+    # Optional max_steps override per phase (None => keep integrator default).
+    phase1_max_steps: Optional[int] = None
+    phase2_max_steps: Optional[int] = None
+    phase3_max_steps: Optional[int] = None
 
 
 @dataclass

@@ -84,6 +84,8 @@ class HAMLTrainer:
             'lr': [],
             'mu_sep': [],
             'level_attractor_diagnostics': [],
+            'convergence_fraction': [],
+            'phase_max_steps': [],
             'events': [],
         }
 
@@ -156,12 +158,15 @@ class HAMLTrainer:
                     level_recovery_td_cooldown -= 1
                 else:
                     self._set_coupling_phase3()
+            self._set_phase_max_steps(phase)
 
             # Epoch
             epoch_loss = 0.0
             epoch_loss_ce = 0.0
             epoch_loss_sep = 0.0
             epoch_loss_dyn = 0.0
+            epoch_convergence_fraction = 0.0
+            epoch_convergence_count = 0
 
             # Shuffle
             indices = torch.randperm(n_samples)
@@ -187,6 +192,9 @@ class HAMLTrainer:
                 final_states, _, _, trajectory = self.model.integrator.integrate(
                     initial_states, return_trajectory=True
                 )
+                if self.model.integrator.last_convergence_fraction is not None:
+                    epoch_convergence_fraction += float(self.model.integrator.last_convergence_fraction)
+                    epoch_convergence_count += 1
 
                 # Loss
                 loss_dict = self.loss_fn(
@@ -221,6 +229,10 @@ class HAMLTrainer:
             epoch_loss_ce /= n_batches
             epoch_loss_sep /= n_batches
             epoch_loss_dyn /= n_batches
+            mean_convergence_fraction = (
+                epoch_convergence_fraction / epoch_convergence_count
+                if epoch_convergence_count > 0 else None
+            )
 
             # Accuracy
             with torch.no_grad():
@@ -248,6 +260,8 @@ class HAMLTrainer:
             self.history['level_divergence'].append(level_div)
             self.history['lr'].append(self.optimizer.get_lr())
             self.history['mu_sep'].append(self.loss_fn.mu_sep)
+            self.history['convergence_fraction'].append(mean_convergence_fraction)
+            self.history['phase_max_steps'].append(int(self.model.integrator.max_steps))
             self.history['level_attractor_diagnostics'].append(
                 self._compute_level_attractor_diagnostics()
             )
@@ -433,6 +447,9 @@ class HAMLTrainer:
                 msg = f"Epoch {epoch+1}: loss={epoch_loss:.3f}, acc={accuracy:.3f}"
                 msg += f", level_acc={['{:.3f}'.format(a) for a in level_accuracy]}"
                 msg += f", level_div={level_div:.3f}, lr={self.optimizer.get_lr():.6f}"
+                msg += f", max_steps={self.model.integrator.max_steps}"
+                if mean_convergence_fraction is not None:
+                    msg += f", conv_frac={mean_convergence_fraction:.3f}"
                 if val_accuracy is not None:
                     msg += f", val_acc={val_accuracy:.3f}"
                 print(msg)
@@ -481,6 +498,18 @@ class HAMLTrainer:
             self.model.coupling.log_alpha_bu.fill_(torch.log(torch.tensor(self.alpha_bu_target)))
             td_value = max(1e-6, float(self.alpha_td_target * td_scale))
             self.model.coupling.log_alpha_td.fill_(torch.log(torch.tensor(td_value)))
+
+    def _set_phase_max_steps(self, phase):
+        """Apply optional per-phase max_steps schedule."""
+        configured = None
+        if phase == 1:
+            configured = self.phase_config.phase1_max_steps
+        elif phase == 2:
+            configured = self.phase_config.phase2_max_steps
+        else:
+            configured = self.phase_config.phase3_max_steps
+        if configured is not None:
+            self.model.integrator.max_steps = int(configured)
 
     def _freeze_mu_positions(self):
         """GÃ¨le les positions des attracteurs (mu) pour limiter la dÃ©rive tardive."""

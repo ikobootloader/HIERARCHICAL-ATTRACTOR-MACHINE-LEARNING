@@ -62,7 +62,20 @@ class ODEIntegrator(nn.Module):
         self.max_steps = max_steps
         self.tol = tol
         self.convergence_check_every = max(1, int(convergence_check_every))
+        self.last_convergence_fraction = None
         self._warned_missing_adjoint = False
+
+    def _compute_convergence_fraction(self, old_states, new_states):
+        """Compute fraction of batch samples below tolerance at current step."""
+        if self.tol is None:
+            return None
+        max_vel_per_sample = None
+        for x_old, x_new in zip(old_states, new_states):
+            dx = x_new - x_old
+            # (B,)
+            vel = torch.norm(dx, dim=1) / self.dt
+            max_vel_per_sample = vel if max_vel_per_sample is None else torch.maximum(max_vel_per_sample, vel)
+        return float((max_vel_per_sample < float(self.tol)).float().mean().item())
 
     def compute_forces(self, states):
         """
@@ -176,6 +189,7 @@ class ODEIntegrator(nn.Module):
 
         states = initial_states
         trajectory = [states] if return_trajectory else []
+        self.last_convergence_fraction = None
 
         converged = False
 
@@ -187,6 +201,8 @@ class ODEIntegrator(nn.Module):
                 new_states = self.step_rk4(states)
             else:
                 raise ValueError(f"Unknown method: {self.method}")
+
+            self.last_convergence_fraction = self._compute_convergence_fraction(states, new_states)
 
             if self.tol is not None and ((step + 1) % self.convergence_check_every == 0):
                 # Reduce on device and sync to host only every N steps.
