@@ -30,7 +30,17 @@ class ODEIntegrator(nn.Module):
         dx/dt = (1/γ) * F(x, t)
     """
 
-    def __init__(self, levels, coupling, gamma=1.0, method='euler', dt=0.1, max_steps=100, tol=1e-4):
+    def __init__(
+        self,
+        levels,
+        coupling,
+        gamma=1.0,
+        method='euler',
+        dt=0.1,
+        max_steps=100,
+        tol=1e-4,
+        convergence_check_every=5,
+    ):
         """
         Args:
             levels (list[Level]): Niveaux hiérarchiques
@@ -39,7 +49,8 @@ class ODEIntegrator(nn.Module):
             method (str): 'euler', 'rk4', ou 'adjoint'
             dt (float): Pas de temps
             max_steps (int): Nombre maximum d'itérations
-            tol (float): Tolérance de convergence ||dx/dt|| < tol
+            tol (float|None): Tolérance de convergence ||dx/dt|| < tol (None = désactivé)
+            convergence_check_every (int): Fréquence des checks de convergence (en pas)
         """
         super().__init__()
 
@@ -50,6 +61,7 @@ class ODEIntegrator(nn.Module):
         self.dt = dt
         self.max_steps = max_steps
         self.tol = tol
+        self.convergence_check_every = max(1, int(convergence_check_every))
         self._warned_missing_adjoint = False
 
     def compute_forces(self, states):
@@ -176,19 +188,20 @@ class ODEIntegrator(nn.Module):
             else:
                 raise ValueError(f"Unknown method: {self.method}")
 
-            # Critère de convergence : ||dx/dt|| < tol à tous les niveaux
-            max_velocity = 0.0
-            for x_old, x_new in zip(states, new_states):
-                dx = x_new - x_old
-                velocity = torch.norm(dx) / self.dt
-                max_velocity = max(max_velocity, velocity.item())
+            if self.tol is not None and ((step + 1) % self.convergence_check_every == 0):
+                # Reduce on device and sync to host only every N steps.
+                max_velocity = None
+                for x_old, x_new in zip(states, new_states):
+                    dx = x_new - x_old
+                    velocity = torch.norm(dx) / self.dt
+                    max_velocity = velocity if max_velocity is None else torch.maximum(max_velocity, velocity)
 
-            if max_velocity < self.tol:
-                converged = True
-                states = new_states
-                if return_trajectory:
-                    trajectory.append(states)
-                break
+                if float(max_velocity.item()) < float(self.tol):
+                    converged = True
+                    states = new_states
+                    if return_trajectory:
+                        trajectory.append(states)
+                    break
 
             states = new_states
 
@@ -221,6 +234,8 @@ class ODEIntegrator(nn.Module):
             tuple: (step_idx, converged)
         """
         n_times = flat_traj.shape[0]
+        if self.tol is None:
+            return n_times - 1, False
         for i in range(1, n_times):
             dx = flat_traj[i] - flat_traj[i - 1]
             velocity = torch.norm(dx) / self.dt

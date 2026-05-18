@@ -66,6 +66,7 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
         dt=0.1,
         max_steps=100,
         tol=1e-4,
+        convergence_check_every=5,
         learn_projections=False,
         learn_alphas=False,
         lr=0.01,
@@ -117,6 +118,7 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
         self.dt = dt
         self.max_steps = max_steps
         self.tol = tol
+        self.convergence_check_every = convergence_check_every
         self.learn_projections = learn_projections
         self.learn_alphas = learn_alphas
         self.lr = lr
@@ -225,7 +227,8 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
             method=self.integrator_method,
             dt=self.dt,
             max_steps=self.max_steps,
-            tol=self.tol
+            tol=self.tol,
+            convergence_check_every=self.convergence_check_every,
         ).to(self.device)
 
         # 5. Loss
@@ -470,6 +473,7 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
             'rho_sigma_ratio': self.rho_sigma_ratio,
             'mu_sep': self.mu_sep,
             'mu_dyn': self.mu_dyn,
+            'convergence_check_every': self.convergence_check_every,
             'level_score_weighting': self.level_score_weighting,
             'use_vectorized_levels': self.use_vectorized_levels,
             'repulsion_mode': self.repulsion_mode,
