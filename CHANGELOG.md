@@ -6,6 +6,15 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 
 ## [Non publié]
 
+### Modifié - 2026-05-18
+- Ajout d'un script de profilage runtime `experiments/profile_training_runtime.py` pour mesurer objectivement les coûts avant optimisation :
+  - profilage global via `cProfile` (`.prof` + tops `cumtime`/`tottime`),
+  - profilage ligne-par-ligne optionnel via `line_profiler` (si disponible),
+  - export d'un résumé JSON des artefacts et métriques run.
+- Le script supporte deux modes dataset :
+  - `make_moons` (local, sans dépendance réseau) pour smoke-tests rapides,
+  - `fashion_mnist` (OpenML) pour profilage du pipeline cible quand le réseau est disponible.
+
 ### Modifié - 2026-05-17
 - Campagne F (Fashion-MNIST) complétée avec comparaison `coupled_tuned` vs `independent` sur seeds `42..46` :
   - couplé: `80.28% ± 1.00`

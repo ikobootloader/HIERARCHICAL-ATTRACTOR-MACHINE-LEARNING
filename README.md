@@ -130,6 +130,13 @@ Note organisation (2026-05-15) :
 | D (SA-nODE-reimpl) | Comparaison architecturale contrôlée hiérarchie vs plat | `experiments/noisy_sanode_comparison.py`, `experiments/tune_sanode_reimpl.py` | Accuracy HAML couplé vs SA-nODE-reimpl |
 | E (Stabilisation) | Stabiliser les gains couplés forts sur concentrique | `experiments/concentric_coupling_ablation.py`, `experiments/seedwise_coupling_diagnostics.py` | E10c (`thr=0.71`): `74.68% ± 5.49`, min `67.25%` |
 | F (Fashion-MNIST) | Validation réelle haute dimension (784D, 10 classes) | `experiments/fashion_mnist_short_probe.py` | seed 42: test `80.1%` (10 epochs, n_train=5000) |
+| G (Profilage runtime) | Mesurer où passe le temps avant optimisation | `experiments/profile_training_runtime.py` | Artefacts `cProfile` + rapport ligne-à-ligne optionnel |
+
+Commande de profilage recommandée (locale, sans réseau) :
+- `python experiments/profile_training_runtime.py --dataset make_moons --n-train 1200 --n-test 400 --n-epochs 2 --max-steps 20 --out-dir experiments/profile_runtime_moons`
+
+Commande de profilage pipeline cible (si accès OpenML) :
+- `python experiments/profile_training_runtime.py --dataset fashion_mnist --n-train 5000 --n-test 1000 --n-epochs 2 --max-steps 40 --out-dir experiments/profile_runtime_fashion`
 
 ### Campagne A - MNIST subset (1500/500, 5 epochs)
 
