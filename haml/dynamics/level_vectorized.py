@@ -112,12 +112,27 @@ class LevelVectorized(nn.Module):
         return self._attractor_views
 
     def _flat_force(self, x, sigma_sq, sign=1.0):
-        delta = self.positions.unsqueeze(0) - x.unsqueeze(1)  # (B, A, D)
-        dist_sq = torch.sum(delta ** 2, dim=-1)  # (B, A)
+        """
+        Memory-efficient aggregated force:
+        sum_a c_a K_a(x) (mu_a - x)
+
+        Returns:
+            torch.Tensor: (B, D)
+        """
+        # Pairwise squared distances without building (B, A, D) tensor.
+        x_sq = torch.sum(x ** 2, dim=1, keepdim=True)  # (B, 1)
+        p_sq = torch.sum(self.positions ** 2, dim=1).unsqueeze(0)  # (1, A)
+        xp = x @ self.positions.t()  # (B, A)
+        dist_sq = torch.clamp(x_sq + p_sq - 2.0 * xp, min=0.0)  # (B, A)
+
         kernel = torch.exp(-dist_sq / (2.0 * sigma_sq.unsqueeze(0)))  # (B, A)
         coeff = sign * torch.exp(self.log_weight) / sigma_sq  # (A,)
-        force = coeff.unsqueeze(0).unsqueeze(-1) * delta * kernel.unsqueeze(-1)
-        return force
+        weighted = kernel * coeff.unsqueeze(0)  # (B, A)
+
+        # sum_a weighted_a * mu_a  -  x * sum_a weighted_a
+        term_mu = weighted @ self.positions  # (B, D)
+        term_x = x * torch.sum(weighted, dim=1, keepdim=True)  # (B, D)
+        return term_mu - term_x
 
     def initialize_attractors(self, X, y, sigma_init=None):
         if isinstance(X, torch.Tensor):
@@ -174,14 +189,20 @@ class LevelVectorized(nn.Module):
         sigma_sq = torch.exp(self.log_sigma) ** 2
         rho_sq = torch.exp(self.log_rho) ** 2
 
-        attraction = self._flat_force(x, sigma_sq=sigma_sq, sign=1.0).sum(dim=1)
+        attraction = self._flat_force(x, sigma_sq=sigma_sq, sign=1.0)
 
         repulsion_all = self._flat_force(x, sigma_sq=rho_sq, sign=-1.0)
         if self.repulsion_mode == "global":
-            repulsion = repulsion_all.sum(dim=1)
+            repulsion = repulsion_all
         else:
+            # Fallback path keeps exact semantics for research ablations.
+            delta = self.positions.unsqueeze(0) - x.unsqueeze(1)  # (B, A, D)
+            dist_sq = torch.sum(delta ** 2, dim=-1)  # (B, A)
+            kernel = torch.exp(-dist_sq / (2.0 * rho_sq.unsqueeze(0)))  # (B, A)
+            coeff = -torch.exp(self.log_weight) / rho_sq  # (A,)
+            full = coeff.unsqueeze(0).unsqueeze(-1) * delta * kernel.unsqueeze(-1)  # (B, A, D)
             one_hot = torch.nn.functional.one_hot(self.class_indices, num_classes=self.n_classes).float()
-            class_repulsion = torch.einsum("bad,ac->bcd", repulsion_all, one_hot)
+            class_repulsion = torch.einsum("bad,ac->bcd", full, one_hot)
             repulsion = class_repulsion.sum(dim=1)
         return attraction + self.lambda_repulsion * repulsion
 
