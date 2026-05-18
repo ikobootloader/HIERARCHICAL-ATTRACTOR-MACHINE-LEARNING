@@ -187,10 +187,11 @@ class HAMLTrainer:
                 # Forward
                 self.optimizer.zero_grad()
 
-                # IntÃ©gration ODE avec trajectoire
+                # IntÃ©gration ODE avec trajectoire uniquement si nÃ©cessaire
+                need_trajectory = self.loss_fn.mu_dyn > 0
                 initial_states = self.model.spaces(X_batch)
                 final_states, _, _, trajectory = self.model.integrator.integrate(
-                    initial_states, return_trajectory=True
+                    initial_states, return_trajectory=need_trajectory
                 )
                 if self.model.integrator.last_convergence_fraction is not None:
                     epoch_convergence_fraction += float(self.model.integrator.last_convergence_fraction)
@@ -201,7 +202,7 @@ class HAMLTrainer:
                     final_states,
                     list(self.model.levels),
                     y_batch,
-                    trajectory=trajectory if self.loss_fn.mu_dyn > 0 else None
+                    trajectory=trajectory if need_trajectory else None
                 )
 
                 loss = loss_dict['total']
