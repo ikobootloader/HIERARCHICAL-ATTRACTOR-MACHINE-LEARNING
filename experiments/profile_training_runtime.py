@@ -164,6 +164,7 @@ def run_probe(args):
         max_steps=args.max_steps,
         tol=None if args.disable_convergence_check else args.tol,
         convergence_check_every=args.convergence_check_every,
+        mu_dyn=args.mu_dyn,
         lr=args.lr,
         n_epochs=args.n_epochs,
         batch_size=args.batch_size,
@@ -268,6 +269,7 @@ def parse_args():
     parser.add_argument("--tol", type=float, default=1e-4)
     parser.add_argument("--convergence-check-every", type=int, default=5)
     parser.add_argument("--disable-convergence-check", action="store_true")
+    parser.add_argument("--mu-dyn", type=float, default=0.0)
     parser.add_argument("--lr", type=float, default=0.01)
     parser.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto")
     parser.add_argument("--top-n", type=int, default=40, help="Top functions to print in cProfile summaries.")
