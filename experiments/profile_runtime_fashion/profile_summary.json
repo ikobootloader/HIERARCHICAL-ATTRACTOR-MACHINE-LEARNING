@@ -1,0 +1,38 @@
+{
+  "config": {
+    "seed": 42,
+    "dataset": "fashion_mnist",
+    "noise": 0.3,
+    "mode": "coupled_tuned",
+    "n_train": 5000,
+    "n_test": 1000,
+    "n_epochs": 2,
+    "phase1_epochs": 1,
+    "phase2_epochs": 0,
+    "n_attractors_per_class": 2,
+    "batch_size": 128,
+    "max_steps": 40,
+    "tol": 0.0001,
+    "lr": 0.01,
+    "device": "auto",
+    "top_n": 40,
+    "skip_line_profiler": false,
+    "out_dir": "experiments/profile_runtime_fashion"
+  },
+  "probe": {
+    "train_time_sec": 1248.772076329,
+    "test_accuracy": 0.744,
+    "final_train_accuracy": 0.7542,
+    "n_history_epochs": 2
+  },
+  "artifacts": {
+    "profile_path": "experiments/profile_runtime_fashion/cprofile_stats.prof",
+    "top_cumtime_path": "experiments/profile_runtime_fashion/cprofile_top_cumtime.txt",
+    "top_tottime_path": "experiments/profile_runtime_fashion/cprofile_top_tottime.txt",
+    "line_profile": {
+      "enabled": true,
+      "report_path": "experiments/profile_runtime_fashion/line_profiler_report.txt"
+    }
+  },
+  "generated_at_epoch_sec": 1779124615.7407937
+}

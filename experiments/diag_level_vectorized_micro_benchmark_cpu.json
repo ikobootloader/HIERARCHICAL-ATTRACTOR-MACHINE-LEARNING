@@ -1,0 +1,32 @@
+{
+  "device": "cpu",
+  "config": {
+    "batch_size": 125,
+    "dim": 784,
+    "n_classes": 10,
+    "n_attractors": 2,
+    "iters": 5,
+    "warmup": 2,
+    "seed": 42,
+    "device": "cpu",
+    "out_json": "experiments/diag_level_vectorized_micro_benchmark_cpu.json"
+  },
+  "timings_sec": {
+    "intra_level_force": {
+      "reference_forward": 0.018499960000008288,
+      "vectorized_forward": 0.008218239999951037,
+      "speedup_forward": 2.2510853905603274,
+      "reference_forward_backward": 0.05197072000009939,
+      "vectorized_forward_backward": 0.032188020000103276,
+      "speedup_forward_backward": 1.6145982262945233
+    },
+    "predict_class_scores": {
+      "reference_forward": 0.006584060000022873,
+      "vectorized_forward": 0.002083680000032473,
+      "speedup_forward": 3.1598230054136263,
+      "reference_forward_backward": 0.017061220000141476,
+      "vectorized_forward_backward": 0.00655748000008316,
+      "speedup_forward_backward": 2.601795201803911
+    }
+  }
+}

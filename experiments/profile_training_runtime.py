@@ -156,6 +156,8 @@ def run_probe(args):
         n_attractors_per_class=args.n_attractors_per_class,
         alpha_bu=alpha_bu,
         alpha_td=alpha_td,
+        use_vectorized_levels=args.use_vectorized_levels,
+        repulsion_mode=args.repulsion_mode,
         max_steps=args.max_steps,
         tol=args.tol,
         lr=args.lr,
@@ -238,6 +240,8 @@ def parse_args():
     parser.add_argument("--dataset", choices=["fashion_mnist", "make_moons"], default="make_moons")
     parser.add_argument("--noise", type=float, default=0.30, help="Noise used for make_moons dataset.")
     parser.add_argument("--mode", choices=["coupled_tuned", "independent"], default="coupled_tuned")
+    parser.add_argument("--use-vectorized-levels", action="store_true")
+    parser.add_argument("--repulsion-mode", choices=["global", "inter_class_only"], default="global")
     parser.add_argument("--n-train", type=int, default=1000)
     parser.add_argument("--n-test", type=int, default=300)
     parser.add_argument("--n-epochs", type=int, default=1)

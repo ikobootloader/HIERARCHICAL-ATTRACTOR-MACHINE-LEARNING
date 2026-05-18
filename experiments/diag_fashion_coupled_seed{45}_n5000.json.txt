@@ -1,0 +1,106 @@
+Architecture: 784 -> 392 -> 196
+HAML initialized: 3 levels, 2 attractors/class
+Coupling: alpha_bu=0.50, alpha_td=1.50
+
+======================================================================
+HAML Training - 3 Phase Strategy
+======================================================================
+Total epochs: 10
+  Phase 1 (independent): epochs 0-2
+  Phase 2 (progressive): epochs 2-5
+  Phase 3 (joint): epochs 5-10
+======================================================================
+
+Epoch 1/10 [Phase 1]: 100%|██████████| 40/40 [09:29<00:00, 14.24s/it, loss=0.679, ce=0.679]
+Epoch 1: loss=0.913, acc=0.727, level_acc=['0.732', '0.727', '0.724'], level_div=0.008, lr=0.010000
+Epoch 2/10 [Phase 1]: 100%|██████████| 40/40 [09:22<00:00, 14.07s/it, loss=1.074, ce=1.074]
+Epoch 2: loss=0.800, acc=0.751, level_acc=['0.756', '0.745', '0.744'], level_div=0.012, lr=0.010000
+Epoch 3/10 [Phase 2]: 100%|██████████| 40/40 [10:04<00:00, 15.11s/it, loss=0.352, ce=0.352]
+Epoch 4/10 [Phase 2]:   0%|          | 0/40 [00:00<?, ?it/s]
+Epoch 3: loss=0.722, acc=0.768, level_acc=['0.780', '0.764', '0.761'], level_div=0.019, lr=0.010000
+Epoch 4/10 [Phase 2]: 100%|██████████| 40/40 [09:47<00:00, 14.70s/it, loss=0.476, ce=0.475]
+Epoch 4: loss=0.689, acc=0.781, level_acc=['0.782', '0.779', '0.777'], level_div=0.005, lr=0.010000
+Epoch 5/10 [Phase 2]: 100%|██████████| 40/40 [09:46<00:00, 14.65s/it, loss=0.619, ce=0.616]
+Epoch 5: loss=0.706, acc=0.780, level_acc=['0.795', '0.775', '0.774'], level_div=0.022, lr=0.010000
+Epoch 6/10 [Phase 3]: 100%|██████████| 40/40 [09:46<00:00, 14.67s/it, loss=0.383, ce=0.374]
+Epoch 6: loss=0.753, acc=0.793, level_acc=['0.772', '0.790', '0.786'], level_div=0.018, lr=0.010000
+Epoch 7/10 [Phase 3]: 100%|██████████| 40/40 [10:12<00:00, 15.31s/it, loss=0.204, ce=0.196]
+Epoch 7: loss=0.731, acc=0.804, level_acc=['0.800', '0.802', '0.800'], level_div=0.002, lr=0.010000
+Epoch 8/10 [Phase 3]: 100%|██████████| 40/40 [11:02<00:00, 16.56s/it, loss=0.646, ce=0.637]
+Epoch 8: loss=0.721, acc=0.805, level_acc=['0.801', '0.803', '0.798'], level_div=0.004, lr=0.010000
+Epoch 9/10 [Phase 3]: 100%|██████████| 40/40 [11:07<00:00, 16.69s/it, loss=0.304, ce=0.296]
+Epoch 9: loss=0.704, acc=0.812, level_acc=['0.782', '0.807', '0.805'], level_div=0.025, lr=0.010000
+Epoch 10/10 [Phase 3]: 100%|██████████| 40/40 [11:04<00:00, 16.60s/it, loss=0.407, ce=0.399]
+Epoch 10: loss=0.690, acc=0.815, level_acc=['0.794', '0.808', '0.810'], level_div=0.016, lr=0.010000
+
+======================================================================
+Training completed
+Final accuracy: 0.815
+======================================================================
+{
+  "dataset": "fashion_mnist_784",
+  "seed": 45,
+  "n_train": 5000,
+  "n_test": 1000,
+  "n_epochs": 10,
+  "phase1_epochs": 2,
+  "phase2_epochs": 3,
+  "phase3_epochs": 5,
+  "test_accuracy": 0.806,
+  "train_time_sec": 6319.46257352829,
+  "phase_accuracy": {
+    "phase1_end_train_accuracy": 0.7508,
+    "phase2_end_train_accuracy": 0.7804,
+    "phase3_end_train_accuracy": 0.8152
+  },
+  "level_accuracy_phase3": [
+    {
+      "epoch": 6,
+      "level_accuracy": [
+        0.7716000080108643,
+        0.7899999618530273,
+        0.7863999605178833
+      ]
+    },
+    {
+      "epoch": 7,
+      "level_accuracy": [
+        0.8001999855041504,
+        0.8015999794006348,
+        0.7996000051498413
+      ]
+    },
+    {
+      "epoch": 8,
+      "level_accuracy": [
+        0.8009999990463257,
+        0.8025999665260315,
+        0.7983999848365784
+      ]
+    },
+    {
+      "epoch": 9,
+      "level_accuracy": [
+        0.7820000052452087,
+        0.8071999549865723,
+        0.8053999543190002
+      ]
+    },
+    {
+      "epoch": 10,
+      "level_accuracy": [
+        0.7935999631881714,
+        0.8083999752998352,
+        0.8100000023841858
+      ]
+    }
+  ],
+  "events": [],
+  "recovery_events": [],
+  "stability_decay_events": [],
+  "level_recovery_config": {
+    "chance_tolerance": 0.12,
+    "stuck_threshold_from_chance": 0.22,
+    "other_levels_strong_threshold": 0.2
+  }
+}

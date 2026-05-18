@@ -1,0 +1,38 @@
+{
+  "config": {
+    "seed": 42,
+    "dataset": "make_moons",
+    "noise": 0.3,
+    "mode": "coupled_tuned",
+    "n_train": 200,
+    "n_test": 100,
+    "n_epochs": 1,
+    "phase1_epochs": 1,
+    "phase2_epochs": 0,
+    "n_attractors_per_class": 2,
+    "batch_size": 64,
+    "max_steps": 5,
+    "tol": 0.0001,
+    "lr": 0.01,
+    "device": "cpu",
+    "top_n": 40,
+    "skip_line_profiler": true,
+    "out_dir": "experiments/profile_runtime_smoke"
+  },
+  "probe": {
+    "train_time_sec": 0.4650606999998672,
+    "test_accuracy": 0.84,
+    "final_train_accuracy": 0.845,
+    "n_history_epochs": 1
+  },
+  "artifacts": {
+    "profile_path": "experiments\\profile_runtime_smoke\\cprofile_stats.prof",
+    "top_cumtime_path": "experiments\\profile_runtime_smoke\\cprofile_top_cumtime.txt",
+    "top_tottime_path": "experiments\\profile_runtime_smoke\\cprofile_top_tottime.txt",
+    "line_profile": {
+      "enabled": false,
+      "skipped": true
+    }
+  },
+  "generated_at_epoch_sec": 1779121159.4404874
+}
