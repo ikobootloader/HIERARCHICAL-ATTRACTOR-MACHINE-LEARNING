@@ -46,7 +46,27 @@ def set_seed(seed):
 def load_fashion_mnist_subset(n_train, n_test, seed):
     cache_dir = os.path.join(os.getcwd(), ".sklearn_data")
     os.makedirs(cache_dir, exist_ok=True)
-    ds = fetch_openml("Fashion-MNIST", version=1, parser="auto", data_home=cache_dir)
+    ds = None
+    fetch_errors = []
+    # Try by canonical name first.
+    try:
+        ds = fetch_openml("Fashion-MNIST", version=1, parser="auto", data_home=cache_dir)
+    except Exception as exc:
+        fetch_errors.append(f"name/version lookup failed: {exc}")
+    # Fallback: stable OpenML dataset id for Fashion-MNIST.
+    if ds is None:
+        try:
+            ds = fetch_openml(data_id=40996, parser="auto", data_home=cache_dir)
+        except Exception as exc:
+            fetch_errors.append(f"data_id lookup failed: {exc}")
+    if ds is None:
+        details = " | ".join(fetch_errors) if fetch_errors else "unknown OpenML error"
+        raise RuntimeError(
+            "Unable to load Fashion-MNIST from OpenML. "
+            "If this environment blocks OpenML, use '--dataset make_moons' for profiling, "
+            "or retry later when OpenML is reachable. "
+            f"Details: {details}"
+        )
     X = ds.data.to_numpy()
     y = ds.target.to_numpy().astype(int)
 
