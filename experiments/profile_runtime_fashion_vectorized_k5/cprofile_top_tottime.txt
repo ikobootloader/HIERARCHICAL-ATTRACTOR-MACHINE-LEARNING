@@ -1,0 +1,48 @@
+         6706919 function calls (6676976 primitive calls) in 157.244 seconds
+
+   Ordered by: internal time
+   List reduced from 6027 to 40 due to restriction <40>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+       80   57.397    0.717   57.397    0.717 {method 'run_backward' of 'torch._C._EngineBase' objects}
+    81600   17.246    0.000   26.611    0.000 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/dynamics/level_vectorized.py:114(_flat_force)
+    38307   13.798    0.000   13.798    0.000 {method 'read' of '_ssl._SSLSocket' objects}
+     2992   11.710    0.004   11.710    0.004 {method 'item' of 'torch._C.TensorBase' objects}
+   300929    6.628    0.000    6.628    0.000 {built-in method torch.exp}
+   173850    5.276    0.000    5.276    0.000 {method 'pow' of 'torch._C.TensorBase' objects}
+        1    3.160    3.160    4.196    4.196 /usr/local/lib/python3.12/dist-packages/pandas/io/parsers/c_parser_wrapper.py:222(read)
+     3400    3.109    0.001   55.908    0.016 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/dynamics/integrator.py:126(step_rk4)
+    54400    2.685    0.000    3.154    0.000 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/projection/spaces.py:127(project_up)
+    81840    2.364    0.000    2.364    0.000 {method 'sum' of 'torch._C.TensorBase' objects}
+   491100    2.260    0.000    2.260    0.000 {method 'unsqueeze' of 'torch._C.TensorBase' objects}
+    27372    2.215    0.000    2.402    0.000 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/projection/spaces.py:107(project_down)
+    13600    2.199    0.000   51.280    0.004 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/dynamics/integrator.py:67(compute_forces)
+    40800    2.087    0.000   37.107    0.001 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/dynamics/level_vectorized.py:173(intra_level_force)
+    91515    2.031    0.000    2.031    0.000 {built-in method torch.sum}
+        1    1.725    1.725  126.967  126.967 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/training/trainer.py:94(train)
+    27200    1.528    0.000    6.040    0.000 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/dynamics/coupling.py:56(bottom_up_force)
+    13600    1.515    0.000   52.795    0.004 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/dynamics/integrator.py:93(velocity_field)
+    40800    1.375    0.000   11.381    0.000 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/dynamics/coupling.py:142(total_force)
+    27200    1.223    0.000    3.458    0.000 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/dynamics/coupling.py:87(top_down_force)
+    20020    1.125    0.000    1.125    0.000 {method 'decompress' of 'zlib._ZlibDecompressor' objects}
+       10    1.109    0.111    1.109    0.111 {method 'do_handshake' of '_ssl._SSLSocket' objects}
+       10    1.023    0.102    1.023    0.102 {method 'connect' of '_socket.socket' objects}
+       10    0.930    0.093    0.932    0.093 {built-in method _socket.getaddrinfo}
+   602810    0.909    0.000    0.909    0.000 /usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py:1952(__getattr__)
+        8    0.630    0.079    0.637    0.080 /usr/local/lib/python3.12/dist-packages/scipy/linalg/_decomp_lu.py:213(lu)
+    27224    0.509    0.000    0.509    0.000 {built-in method torch.zeros_like}
+        1    0.469    0.469    1.298    1.298 /usr/local/lib/python3.12/dist-packages/sklearn/utils/extmath.py:215(randomized_range_finder)
+      300    0.409    0.001    0.608    0.002 /usr/local/lib/python3.12/dist-packages/sklearn/cluster/_kmeans.py:623(_kmeans_single_lloyd)
+   173850    0.361    0.000    5.696    0.000 /usr/local/lib/python3.12/dist-packages/torch/_tensor.py:40(wrapped)
+    20043    0.284    0.000    0.284    0.000 {built-in method zlib.crc32}
+       85    0.265    0.003   68.076    0.801 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/dynamics/integrator.py:159(integrate)
+    37897    0.264    0.000    0.264    0.000 {method 'update' of '_hashlib.HASH' objects}
+       80    0.253    0.003    0.524    0.007 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/training/loss.py:100(dynamic_loss)
+       76    0.250    0.003    0.251    0.003 /usr/local/lib/python3.12/dist-packages/pandas/core/array_algos/take.py:120(_take_nd_ndarray)
+       87    0.222    0.003    0.222    0.003 {built-in method torch._C._cuda_getDeviceCount}
+       69    0.210    0.003    0.252    0.004 {method 'to' of 'torch._C.TensorBase' objects}
+        2    0.190    0.095    0.190    0.095 /usr/local/lib/python3.12/dist-packages/scipy/linalg/_decomp_qr.py:13(safecall)
+        1    0.184    0.184    0.184    0.184 /usr/local/lib/python3.12/dist-packages/scipy/linalg/_decomp_svd.py:16(svd)
+      784    0.180    0.000    0.180    0.000 /usr/local/lib/python3.12/dist-packages/pandas/core/dtypes/concat.py:52(concat_compat)
+
+

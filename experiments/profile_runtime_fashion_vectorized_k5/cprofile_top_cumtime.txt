@@ -1,0 +1,48 @@
+         6706919 function calls (6676976 primitive calls) in 157.244 seconds
+
+   Ordered by: cumulative time
+   List reduced from 6027 to 40 due to restriction <40>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    1.725    1.725  126.967  126.967 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/training/trainer.py:94(train)
+       85    0.265    0.003   68.076    0.801 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/dynamics/integrator.py:159(integrate)
+       80    0.001    0.000   57.408    0.718 /usr/local/lib/python3.12/dist-packages/torch/_tensor.py:575(backward)
+       80    0.002    0.000   57.407    0.718 /usr/local/lib/python3.12/dist-packages/torch/autograd/__init__.py:252(backward)
+       80    0.001    0.000   57.398    0.717 /usr/local/lib/python3.12/dist-packages/torch/autograd/graph.py:856(_engine_run_backward)
+       80   57.397    0.717   57.397    0.717 {method 'run_backward' of 'torch._C._EngineBase' objects}
+     3400    3.109    0.001   55.908    0.016 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/dynamics/integrator.py:126(step_rk4)
+    13600    1.515    0.000   52.795    0.004 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/dynamics/integrator.py:93(velocity_field)
+    13600    2.199    0.000   51.280    0.004 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/dynamics/integrator.py:67(compute_forces)
+    40800    2.087    0.000   37.107    0.001 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/dynamics/level_vectorized.py:173(intra_level_force)
+        5    0.000    0.000   32.517    6.503 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/model/haml.py:315(forward)
+    81600   17.246    0.000   26.611    0.000 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/dynamics/level_vectorized.py:114(_flat_force)
+1204/1203    0.002    0.000   24.743    0.021 /usr/local/lib/python3.12/dist-packages/sklearn/utils/_param_validation.py:185(wrapper)
+     20/7    0.004    0.000   23.762    3.395 /usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py:930(_apply)
+        1    0.054    0.054   23.260   23.260 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/experiments/profile_training_runtime.py:46(load_fashion_mnist_subset)
+        1    0.000    0.000   23.129   23.129 /usr/local/lib/python3.12/dist-packages/sklearn/datasets/_openml.py:754(fetch_openml)
+        5    0.000    0.000   23.128    4.626 /usr/local/lib/python3.12/dist-packages/sklearn/datasets/_openml.py:62(wrapper)
+    30/23    0.000    0.000   18.694    0.813 /usr/local/lib/python3.12/dist-packages/torch/_ops.py:349(fallthrough)
+        1    0.000    0.000   18.275   18.275 /usr/local/lib/python3.12/dist-packages/sklearn/datasets/_openml.py:572(_download_data_to_bunch)
+        1    0.018    0.018   18.274   18.274 /usr/local/lib/python3.12/dist-packages/sklearn/datasets/_openml.py:436(_load_arff_response)
+        6    0.000    0.000   17.256    2.876 /usr/local/lib/python3.12/dist-packages/sklearn/datasets/_openml.py:121(_open_openml_url)
+        3    0.001    0.000   17.151    5.717 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/model/haml.py:333(predict)
+        2    0.002    0.001   15.508    7.754 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/training/metrics.py:13(compute_level_accuracy)
+    38307    0.047    0.000   13.998    0.000 /usr/lib/python3.12/socket.py:706(readinto)
+    38307    0.063    0.000   13.908    0.000 /usr/lib/python3.12/ssl.py:1236(recv_into)
+    38307    0.031    0.000   13.834    0.000 /usr/lib/python3.12/ssl.py:1094(read)
+    38307   13.798    0.000   13.798    0.000 {method 'read' of '_ssl._SSLSocket' objects}
+    10855    0.015    0.000   12.293    0.001 {method 'readline' of '_io.BufferedReader' objects}
+     2992   11.710    0.004   11.710    0.004 {method 'item' of 'torch._C.TensorBase' objects}
+        5    0.001    0.000   11.705    2.341 /usr/lib/python3.12/shutil.py:196(copyfileobj)
+      620    0.002    0.000   11.669    0.019 /usr/lib/python3.12/http/client.py:463(read)
+    40800    1.375    0.000   11.381    0.000 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/dynamics/coupling.py:142(total_force)
+      605    0.019    0.000   11.362    0.019 /usr/lib/python3.12/http/client.py:591(_read_chunked)
+    10495    0.015    0.000   10.135    0.001 /usr/lib/python3.12/http/client.py:567(_get_chunk_left)
+     9891    0.019    0.000    9.851    0.001 /usr/lib/python3.12/http/client.py:537(_read_next_chunk_size)
+   300929    6.628    0.000    6.628    0.000 {built-in method torch.exp}
+    27200    1.528    0.000    6.040    0.000 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/dynamics/coupling.py:56(bottom_up_force)
+   173850    0.361    0.000    5.696    0.000 /usr/local/lib/python3.12/dist-packages/torch/_tensor.py:40(wrapped)
+        5    0.000    0.000    5.545    1.109 /usr/local/lib/python3.12/dist-packages/sklearn/datasets/_openml.py:98(wrapper)
+        5    0.000    0.000    5.545    1.109 /usr/lib/python3.12/urllib/request.py:138(urlopen)
+
+

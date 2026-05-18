@@ -75,7 +75,7 @@ def load_moons_subset(n_train, n_test, seed, noise):
     return X_train, X_test, y_train, y_test
 
 
-def build_trainer(model, n_epochs, phase1_epochs, phase2_epochs):
+def build_trainer(model, n_epochs, phase1_epochs, phase2_epochs, phase1_max_steps, phase2_max_steps, phase3_max_steps):
     return HAMLTrainer(
         model=model,
         optimizer=ConstrainedOptimizer(model.parameters(), lr=model.lr),
@@ -86,6 +86,9 @@ def build_trainer(model, n_epochs, phase1_epochs, phase2_epochs):
             phase1_epochs=phase1_epochs,
             phase2_epochs=phase2_epochs,
             td_warmup_power=2.0,
+            phase1_max_steps=phase1_max_steps,
+            phase2_max_steps=phase2_max_steps,
+            phase3_max_steps=phase3_max_steps,
         ),
         stability_config=StabilityConfig(
             level_divergence_threshold=0.15,
@@ -168,7 +171,15 @@ def run_probe(args):
         device=args.device,
     )
     model.fit(X_train, y_train)
-    trainer = build_trainer(model, args.n_epochs, phase1_epochs, phase2_epochs)
+    trainer = build_trainer(
+        model,
+        args.n_epochs,
+        phase1_epochs,
+        phase2_epochs,
+        args.phase1_max_steps,
+        args.phase2_max_steps,
+        args.phase3_max_steps,
+    )
 
     train_start = time.perf_counter()
     history = trainer.train(X_train, y_train)
@@ -248,6 +259,9 @@ def parse_args():
     parser.add_argument("--n-epochs", type=int, default=1)
     parser.add_argument("--phase1-epochs", type=int, default=1)
     parser.add_argument("--phase2-epochs", type=int, default=0)
+    parser.add_argument("--phase1-max-steps", type=int, default=50)
+    parser.add_argument("--phase2-max-steps", type=int, default=80)
+    parser.add_argument("--phase3-max-steps", type=int, default=100)
     parser.add_argument("--n-attractors-per-class", type=int, default=2)
     parser.add_argument("--batch-size", type=int, default=128)
     parser.add_argument("--max-steps", type=int, default=20)

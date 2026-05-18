@@ -1,0 +1,48 @@
+         6179915 function calls (6150030 primitive calls) in 139.485 seconds
+
+   Ordered by: internal time
+   List reduced from 5787 to 40 due to restriction <40>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+       80   57.603    0.720   57.603    0.720 {method 'run_backward' of 'torch._C._EngineBase' objects}
+    81600   20.646    0.000   31.041    0.000 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/dynamics/level_vectorized.py:114(_flat_force)
+   300929    8.247    0.000    8.247    0.000 {built-in method torch.exp}
+   173850    6.680    0.000    6.680    0.000 {method 'pow' of 'torch._C.TensorBase' objects}
+     3400    3.444    0.001   65.803    0.019 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/dynamics/integrator.py:126(step_rk4)
+        1    3.270    3.270    4.309    4.309 /usr/local/lib/python3.12/dist-packages/pandas/io/parsers/c_parser_wrapper.py:222(read)
+    13600    2.925    0.000   60.367    0.004 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/dynamics/integrator.py:67(compute_forces)
+    27372    2.895    0.000    3.092    0.000 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/projection/spaces.py:107(project_down)
+    54400    2.774    0.000    3.252    0.000 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/projection/spaces.py:127(project_up)
+    81840    2.740    0.000    2.740    0.000 {method 'sum' of 'torch._C.TensorBase' objects}
+   491100    2.274    0.000    2.274    0.000 {method 'unsqueeze' of 'torch._C.TensorBase' objects}
+    40800    2.179    0.000   43.940    0.001 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/dynamics/level_vectorized.py:173(intra_level_force)
+    91515    2.151    0.000    2.151    0.000 {built-in method torch.sum}
+    13600    1.988    0.000   62.355    0.005 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/dynamics/integrator.py:93(velocity_field)
+    27200    1.782    0.000    6.976    0.000 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/dynamics/coupling.py:56(bottom_up_force)
+        1    1.749    1.749  126.503  126.503 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/training/trainer.py:94(train)
+    40800    1.728    0.000   13.075    0.000 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/dynamics/coupling.py:142(total_force)
+    27200    1.381    0.000    3.871    0.000 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/dynamics/coupling.py:87(top_down_force)
+    20020    1.135    0.000    1.135    0.000 {method 'decompress' of 'zlib._ZlibDecompressor' objects}
+   602810    0.720    0.000    0.720    0.000 /usr/local/lib/python3.12/dist-packages/torch/nn/modules/module.py:1952(__getattr__)
+        8    0.653    0.082    0.660    0.083 /usr/local/lib/python3.12/dist-packages/scipy/linalg/_decomp_lu.py:213(lu)
+    27224    0.501    0.000    0.501    0.000 {built-in method torch.zeros_like}
+       10    0.432    0.043    0.432    0.043 {method 'cpu' of 'torch._C.TensorBase' objects}
+      300    0.399    0.001    0.594    0.002 /usr/local/lib/python3.12/dist-packages/sklearn/cluster/_kmeans.py:623(_kmeans_single_lloyd)
+        1    0.376    0.376    1.219    1.219 /usr/local/lib/python3.12/dist-packages/sklearn/utils/extmath.py:215(randomized_range_finder)
+     2312    0.368    0.000    0.368    0.000 {method 'item' of 'torch._C.TensorBase' objects}
+        6    0.351    0.058    0.351    0.058 {method 'mean' of 'torch._C.TensorBase' objects}
+        9    0.349    0.039    0.349    0.039 {built-in method torch.argmax}
+   173850    0.342    0.000    7.079    0.000 /usr/local/lib/python3.12/dist-packages/torch/_tensor.py:40(wrapped)
+    20034    0.286    0.000    0.286    0.000 {built-in method zlib.crc32}
+    37897    0.265    0.000    0.265    0.000 {method 'update' of '_hashlib.HASH' objects}
+       80    0.250    0.003    0.516    0.006 /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/training/loss.py:100(dynamic_loss)
+       76    0.248    0.003    0.249    0.003 /usr/local/lib/python3.12/dist-packages/pandas/core/array_algos/take.py:120(_take_nd_ndarray)
+       87    0.224    0.003    0.224    0.003 {built-in method torch._C._cuda_getDeviceCount}
+       69    0.221    0.003    0.264    0.004 {method 'to' of 'torch._C.TensorBase' objects}
+        2    0.181    0.091    0.181    0.091 /usr/local/lib/python3.12/dist-packages/scipy/linalg/_decomp_qr.py:13(safecall)
+      784    0.172    0.000    0.173    0.000 /usr/local/lib/python3.12/dist-packages/pandas/core/dtypes/concat.py:52(concat_compat)
+        1    0.168    0.168    0.168    0.168 /usr/local/lib/python3.12/dist-packages/scipy/linalg/_decomp_svd.py:16(svd)
+   284332    0.157    0.000    0.197    0.000 {built-in method builtins.getattr}
+    81784    0.154    0.000    0.306    0.000 /usr/local/lib/python3.12/dist-packages/torch/nn/modules/container.py:682(_get_abs_string_index)
+
+
