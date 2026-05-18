@@ -159,7 +159,8 @@ def run_probe(args):
         use_vectorized_levels=args.use_vectorized_levels,
         repulsion_mode=args.repulsion_mode,
         max_steps=args.max_steps,
-        tol=args.tol,
+        tol=None if args.disable_convergence_check else args.tol,
+        convergence_check_every=args.convergence_check_every,
         lr=args.lr,
         n_epochs=args.n_epochs,
         batch_size=args.batch_size,
@@ -251,6 +252,8 @@ def parse_args():
     parser.add_argument("--batch-size", type=int, default=128)
     parser.add_argument("--max-steps", type=int, default=20)
     parser.add_argument("--tol", type=float, default=1e-4)
+    parser.add_argument("--convergence-check-every", type=int, default=5)
+    parser.add_argument("--disable-convergence-check", action="store_true")
     parser.add_argument("--lr", type=float, default=0.01)
     parser.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto")
     parser.add_argument("--top-n", type=int, default=40, help="Top functions to print in cProfile summaries.")

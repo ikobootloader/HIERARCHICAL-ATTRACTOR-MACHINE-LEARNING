@@ -1,0 +1,695 @@
+Timer unit: 1e-09 s
+
+Total time: 134.227 s
+File: /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/training/trainer.py
+Function: HAMLTrainer.train at line 94
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+    94                                               def train(self, X_train, y_train, X_val=None, y_val=None):
+    95                                                   """
+    96                                                   EntraÃ®ne le modÃ¨le avec stratÃ©gie 3 phases.
+    97                                           
+    98                                                   Args:
+    99                                                       X_train (np.ndarray): DonnÃ©es d'entraÃ®nement
+   100                                                       y_train (np.ndarray): Labels d'entraÃ®nement
+   101                                                       X_val (np.ndarray, optional): DonnÃ©es de validation
+   102                                                       y_val (np.ndarray, optional): Labels de validation
+   103                                           
+   104                                                   Returns:
+   105                                                       dict: Historique d'entraÃ®nement
+   106                                                   """
+   107                                                   # Normalisation dÃ©jÃ  faite dans fit()
+   108         1    5859765.0 5.86e+06      0.0          X_train_t = torch.from_numpy(X_train).float().to(self.device)
+   109         1      70800.0  70800.0      0.0          y_train_t = torch.from_numpy(y_train).long().to(self.device)
+   110                                           
+   111         1       2158.0   2158.0      0.0          n_samples = len(X_train)
+   112         1       2736.0   2736.0      0.0          n_batches = (n_samples + self.phase_config.batch_size - 1) // self.phase_config.batch_size
+   113                                           
+   114         1       1073.0   1073.0      0.0          if self.verbose:
+   115                                                       print("\n" + "="*70)
+   116                                                       print("HAML Training - 3 Phase Strategy")
+   117                                                       print("="*70)
+   118                                                       print(f"Total epochs: {self.phase_config.n_epochs}")
+   119                                                       print(f"  Phase 1 (independent): epochs 0-{self.phase_config.phase1_epochs}")
+   120                                                       print(
+   121                                                           f"  Phase 2 (progressive): epochs {self.phase_config.phase1_epochs}-"
+   122                                                           f"{self.phase_config.phase1_epochs + self.phase_config.phase2_epochs}"
+   123                                                       )
+   124                                                       print(
+   125                                                           f"  Phase 3 (joint): epochs "
+   126                                                           f"{self.phase_config.phase1_epochs + self.phase_config.phase2_epochs}-"
+   127                                                           f"{self.phase_config.n_epochs}"
+   128                                                       )
+   129                                                       print("="*70 + "\n")
+   130                                           
+   131                                                   # EntraÃ®nement
+   132         1        513.0    513.0      0.0          divergence_streak = 0
+   133         1        402.0    402.0      0.0          lr_decay_events = 0
+   134         1        593.0    593.0      0.0          last_lr_decay_epoch = -10**9
+   135         1        397.0    397.0      0.0          mu_sep_streak = 0
+   136         1      16979.0  16979.0      0.0          level_recovery_streak = [0 for _ in range(len(self.model.levels))]
+   137         1        491.0    491.0      0.0          level_recovery_triggers = 0
+   138         1        414.0    414.0      0.0          level_recovery_td_cooldown = 0
+   139         1        416.0    416.0      0.0          soft_landing_applied = False
+   140         1        388.0    388.0      0.0          collapse_guard_applied = False
+   141         1        375.0    375.0      0.0          prev_level_div = None
+   142         3       2338.0    779.3      0.0          for epoch in range(self.phase_config.n_epochs):
+   143         2       1191.0    595.5      0.0              recovery_triggered_this_epoch = False
+   144                                                       # DÃ©termination de la phase
+   145         2       2962.0   1481.0      0.0              if epoch < self.phase_config.phase1_epochs:
+   146         1        539.0    539.0      0.0                  phase = 1
+   147         1     135287.0 135287.0      0.0                  self._set_coupling_phase1()
+   148         1       2871.0   2871.0      0.0              elif epoch < self.phase_config.phase1_epochs + self.phase_config.phase2_epochs:
+   149                                                           phase = 2
+   150                                                           progress = (epoch - self.phase_config.phase1_epochs) / self.phase_config.phase2_epochs
+   151                                                           self._set_coupling_phase2(progress)
+   152                                                       else:
+   153         1        539.0    539.0      0.0                  phase = 3
+   154         1        811.0    811.0      0.0                  if level_recovery_td_cooldown > 0:
+   155                                                               self._set_coupling_phase3(td_scale=self.level_recovery_config.td_scale_during_cooldown)
+   156                                                               level_recovery_td_cooldown -= 1
+   157                                                           else:
+   158         1     194188.0 194188.0      0.0                      self._set_coupling_phase3()
+   159                                           
+   160                                                       # Epoch
+   161         2       1216.0    608.0      0.0              epoch_loss = 0.0
+   162         2        870.0    435.0      0.0              epoch_loss_ce = 0.0
+   163         2       1071.0    535.5      0.0              epoch_loss_sep = 0.0
+   164         2        694.0    347.0      0.0              epoch_loss_dyn = 0.0
+   165                                           
+   166                                                       # Shuffle
+   167         2     228336.0 114168.0      0.0              indices = torch.randperm(n_samples)
+   168                                           
+   169         2       1603.0    801.5      0.0              if self.verbose:
+   170                                                           pbar = tqdm(range(n_batches), desc=f"Epoch {epoch+1}/{self.phase_config.n_epochs} [Phase {phase}]")
+   171                                                       else:
+   172         2       1996.0    998.0      0.0                  pbar = range(n_batches)
+   173                                           
+   174        82      70909.0    864.7      0.0              for batch_idx in pbar:
+   175        80     137720.0   1721.5      0.0                  start_idx = batch_idx * self.phase_config.batch_size
+   176        80     281531.0   3519.1      0.0                  end_idx = min(start_idx + self.phase_config.batch_size, n_samples)
+   177        80    1407952.0  17599.4      0.0                  batch_indices = indices[start_idx:end_idx]
+   178                                           
+   179        80    5226342.0  65329.3      0.0                  X_batch = X_train_t[batch_indices]
+   180        80    3333602.0  41670.0      0.0                  y_batch = y_train_t[batch_indices]
+   181                                           
+   182                                                           # Forward
+   183        80   21513327.0 268916.6      0.0                  self.optimizer.zero_grad()
+   184                                           
+   185                                                           # IntÃ©gration ODE avec trajectoire
+   186        80   16976804.0 212210.0      0.0                  initial_states = self.model.spaces(X_batch)
+   187       160     4.07e+10 2.54e+08     30.3                  final_states, _, _, trajectory = self.model.integrator.integrate(
+   188        80      33547.0    419.3      0.0                      initial_states, return_trajectory=True
+   189                                                           )
+   190                                           
+   191                                                           # Loss
+   192       160  828247225.0 5.18e+06      0.6                  loss_dict = self.loss_fn(
+   193        80      32151.0    401.9      0.0                      final_states,
+   194        80    1499912.0  18748.9      0.0                      list(self.model.levels),
+   195        80      41122.0    514.0      0.0                      y_batch,
+   196        80     122164.0   1527.0      0.0                      trajectory=trajectory if self.loss_fn.mu_dyn > 0 else None
+   197                                                           )
+   198                                           
+   199        80 1675037498.0 2.09e+07      1.2                  loss = loss_dict['total']
+   200                                           
+   201                                                           # Backward
+   202        80     5.94e+10 7.42e+08     44.2                  loss.backward()
+   203                                           
+   204                                                           # Step avec contraintes
+   205        80  248850337.0 3.11e+06      0.2                  self.optimizer.step(self.model)
+   206                                           
+   207                                                           # Stats
+   208        80    1630806.0  20385.1      0.0                  epoch_loss += loss.item()
+   209        80     104164.0   1302.0      0.0                  epoch_loss_ce += loss_dict['ce']
+   210        80      80329.0   1004.1      0.0                  epoch_loss_sep += loss_dict['sep']
+   211        80      75599.0    945.0      0.0                  epoch_loss_dyn += loss_dict['dyn']
+   212                                           
+   213        80      60385.0    754.8      0.0                  if self.verbose and isinstance(pbar, tqdm):
+   214                                                               pbar.set_postfix({
+   215                                                                   'loss': f"{loss.item():.3f}",
+   216                                                                   'ce': f"{loss_dict['ce']:.3f}"
+   217                                                               })
+   218                                           
+   219                                                       # Moyennes
+   220         2       3171.0   1585.5      0.0              epoch_loss /= n_batches
+   221         2        938.0    469.0      0.0              epoch_loss_ce /= n_batches
+   222         2        744.0    372.0      0.0              epoch_loss_sep /= n_batches
+   223         2       1325.0    662.5      0.0              epoch_loss_dyn /= n_batches
+   224                                           
+   225                                                       # Accuracy
+   226         4      33460.0   8365.0      0.0              with torch.no_grad():
+   227         2     1.57e+10 7.85e+09     11.7                  y_pred = self.model.predict(X_train)
+   228         2     264912.0 132456.0      0.0                  accuracy = np.mean(y_pred == y_train)
+   229         2     1.57e+10 7.83e+09     11.7                  level_accuracy = compute_level_accuracy(self.model, X_train, y_train)
+   230                                           
+   231                                                       # Validation
+   232         2       2217.0   1108.5      0.0              if X_val is not None:
+   233                                                           with torch.no_grad():
+   234                                                               y_pred_val = self.model.predict(X_val)
+   235                                                               val_accuracy = np.mean(y_pred_val == y_val)
+   236                                                       else:
+   237         2       1475.0    737.5      0.0                  val_accuracy = None
+   238                                           
+   239                                                       # Historique
+   240         2       3661.0   1830.5      0.0              self.history['loss'].append(epoch_loss)
+   241         2       2465.0   1232.5      0.0              self.history['loss_ce'].append(epoch_loss_ce)
+   242         2       2359.0   1179.5      0.0              self.history['loss_sep'].append(epoch_loss_sep)
+   243         2       1751.0    875.5      0.0              self.history['loss_dyn'].append(epoch_loss_dyn)
+   244         2       2590.0   1295.0      0.0              self.history['accuracy'].append(accuracy)
+   245         2       2150.0   1075.0      0.0              self.history['val_accuracy'].append(val_accuracy)
+   246         2       2411.0   1205.5      0.0              self.history['level_accuracy'].append(level_accuracy)
+   247         2       6181.0   3090.5      0.0              level_div = max(level_accuracy) - min(level_accuracy)
+   248         2       2616.0   1308.0      0.0              self.history['level_divergence'].append(level_div)
+   249         2      14101.0   7050.5      0.0              self.history['lr'].append(self.optimizer.get_lr())
+   250         2       4391.0   2195.5      0.0              self.history['mu_sep'].append(self.loss_fn.mu_sep)
+   251         4       3230.0    807.5      0.0              self.history['level_attractor_diagnostics'].append(
+   252         2   13050401.0 6.53e+06      0.0                  self._compute_level_attractor_diagnostics()
+   253                                                       )
+   254                                           
+   255                                                       if (
+   256         2       2729.0   1364.5      0.0                  self.collapse_guard_config.enabled
+   257         2       1018.0    509.0      0.0                  and not collapse_guard_applied
+   258         2       1108.0    554.0      0.0                  and prev_level_div is not None
+   259         1       2796.0   2796.0      0.0                  and (epoch + 1) >= self.collapse_guard_config.start_epoch
+   260                                                       ):
+   261                                                           delta_div = level_div - prev_level_div
+   262                                                           if delta_div > self.collapse_guard_config.delta_div_threshold:
+   263                                                               new_mu_sep = min(
+   264                                                                   self.adaptive_mu_sep_config.max_value,
+   265                                                                   self.loss_fn.mu_sep * self.collapse_guard_config.mu_sep_boost,
+   266                                                               )
+   267                                                               if new_mu_sep > self.loss_fn.mu_sep:
+   268                                                                   self.loss_fn.set_weights(mu_sep=new_mu_sep)
+   269                                                               new_lr = max(
+   270                                                                   self.stability_config.min_lr,
+   271                                                                   self.optimizer.get_lr() * self.collapse_guard_config.lr_factor,
+   272                                                               )
+   273                                                               self.optimizer.set_lr(new_lr)
+   274                                                               collapse_guard_applied = True
+   275                                                               if self.verbose:
+   276                                                                   print(
+   277                                                                       f"[collapse-guard] epoch={epoch+1}, delta_div={delta_div:.3f} > "
+   278                                                                       f"{self.collapse_guard_config.delta_div_threshold:.3f}; "
+   279                                                                       f"mu_sep -> {self.loss_fn.mu_sep:.4f}, lr -> {new_lr:.6f}"
+   280                                                                   )
+   281                                           
+   282         2       3177.0   1588.5      0.0              use_adaptive_mu_sep = self.adaptive_mu_sep_config.enabled
+   283         2       1727.0    863.5      0.0              if self.adaptive_mu_sep_config.phase3_only and phase != 3:
+   284         1        384.0    384.0      0.0                  use_adaptive_mu_sep = False
+   285                                           
+   286         2       2908.0   1454.0      0.0              if use_adaptive_mu_sep and level_div > self.adaptive_mu_sep_config.trigger_divergence:
+   287                                                           mu_sep_streak += 1
+   288                                                       else:
+   289         2        849.0    424.5      0.0                  mu_sep_streak = 0
+   290                                           
+   291         2       1195.0    597.5      0.0              if use_adaptive_mu_sep and mu_sep_streak >= self.adaptive_mu_sep_config.patience:
+   292                                                           new_mu_sep = min(
+   293                                                               self.adaptive_mu_sep_config.max_value,
+   294                                                               self.loss_fn.mu_sep * self.adaptive_mu_sep_config.growth_factor,
+   295                                                           )
+   296                                                           if new_mu_sep > self.loss_fn.mu_sep:
+   297                                                               self.loss_fn.set_weights(mu_sep=new_mu_sep)
+   298                                                               if self.verbose:
+   299                                                                   print(
+   300                                                                       f"[mu-sep] level_div={level_div:.3f} > "
+   301                                                                       f"{self.adaptive_mu_sep_config.trigger_divergence:.3f} "
+   302                                                                       f"(streak={mu_sep_streak}); mu_sep -> {new_mu_sep:.4f}"
+   303                                                                   )
+   304                                           
+   305                                                       if (
+   306         2       1724.0    862.0      0.0                  self.level_recovery_config.enabled
+   307         2        914.0    457.0      0.0                  and phase == 3
+   308         1       1332.0   1332.0      0.0                  and level_recovery_triggers < self.level_recovery_config.max_triggers
+   309                                                       ):
+   310                                                           # Keep streak accumulation independent from global gating conditions.
+   311                                                           # This tracks true "stuck near chance" duration, then gate only triggering.
+   312         1      56245.0  56245.0      0.0                  stuck_level_idx = self._detect_stuck_level(level_accuracy, level_recovery_streak)
+   313                                                           if (
+   314         1        531.0    531.0      0.0                      stuck_level_idx is not None
+   315                                                               and level_div >= self.level_recovery_config.require_divergence
+   316                                                               and self._other_levels_are_strong(level_accuracy, stuck_level_idx)
+   317                                                               and self._has_time_for_recovery(epoch)
+   318                                                           ):
+   319                                                               lr_before_recovery = float(self.optimizer.get_lr())
+   320                                                               self._apply_level_recovery(stuck_level_idx, X_train_t, y_train_t)
+   321                                                               level_recovery_triggers += 1
+   322                                                               level_recovery_td_cooldown = max(
+   323                                                                   0,
+   324                                                                   int(self.level_recovery_config.td_cooldown_epochs),
+   325                                                               )
+   326                                           
+   327                                                               new_mu_sep = min(
+   328                                                                   self.adaptive_mu_sep_config.max_value,
+   329                                                                   self.loss_fn.mu_sep * self.level_recovery_config.mu_sep_boost,
+   330                                                               )
+   331                                                               if new_mu_sep > self.loss_fn.mu_sep:
+   332                                                                   self.loss_fn.set_weights(mu_sep=new_mu_sep)
+   333                                           
+   334                                                               new_lr = max(
+   335                                                                   self.stability_config.min_lr,
+   336                                                                   lr_before_recovery * self.level_recovery_config.lr_factor,
+   337                                                               )
+   338                                                               self.optimizer.set_lr(new_lr)
+   339                                                               level_recovery_streak = [0 for _ in range(len(self.model.levels))]
+   340                                                               recovery_triggered_this_epoch = True
+   341                                                               self.history['events'].append(
+   342                                                                   {
+   343                                                                       'type': 'level_recovery',
+   344                                                                       'epoch': int(epoch + 1),
+   345                                                                       'level_idx': int(stuck_level_idx),
+   346                                                                       'level_accuracy': float(level_accuracy[stuck_level_idx]),
+   347                                                                       'level_divergence': float(level_div),
+   348                                                                       'lr_before': lr_before_recovery,
+   349                                                                       'lr_after': float(new_lr),
+   350                                                                       'mutex_prevented_stability_decay': bool(
+   351                                                                           self.stability_config.skip_lr_decay_if_recovery_triggered
+   352                                                                       ),
+   353                                                                   }
+   354                                                               )
+   355                                                               if self.verbose:
+   356                                                                   print(
+   357                                                                       f"[level-recovery] epoch={epoch+1}, level={stuck_level_idx}, "
+   358                                                                       f"level_acc={level_accuracy[stuck_level_idx]:.3f}, "
+   359                                                                       f"mu_sep -> {self.loss_fn.mu_sep:.4f}, lr -> {new_lr:.6f}, "
+   360                                                                       f"td_cooldown={level_recovery_td_cooldown}"
+   361                                                                   )
+   362                                           
+   363                                                       # Soft landing: mode prÃ©ventif (epoch) ou rÃ©actif (divergence), une seule fois.
+   364         2       1369.0    684.5      0.0              soft_landing_by_epoch = (
+   365         2       2541.0   1270.5      0.0                  self.soft_landing_config.epoch is not None and (epoch + 1) >= self.soft_landing_config.epoch
+   366                                                       )
+   367         2       1457.0    728.5      0.0              soft_landing_by_div = (
+   368         2       1192.0    596.0      0.0                  self.soft_landing_config.trigger_divergence is not None
+   369                                                           and level_div >= self.soft_landing_config.trigger_divergence
+   370                                                       )
+   371         2       1085.0    542.5      0.0              if not soft_landing_applied and (soft_landing_by_epoch or soft_landing_by_div):
+   372                                                           new_lr = max(
+   373                                                               self.stability_config.min_lr,
+   374                                                               self.optimizer.get_lr() * self.soft_landing_config.lr_factor,
+   375                                                           )
+   376                                                           self.optimizer.set_lr(new_lr)
+   377                                                           if self.soft_landing_config.freeze_mu:
+   378                                                               self._freeze_mu_positions()
+   379                                                           soft_landing_applied = True
+   380                                                           if self.verbose:
+   381                                                               reason = (
+   382                                                                   f"epoch>={self.soft_landing_config.epoch}"
+   383                                                                   if soft_landing_by_epoch
+   384                                                                   else f"level_div>={self.soft_landing_config.trigger_divergence:.3f}"
+   385                                                               )
+   386                                                               print(
+   387                                                                   f"[soft-landing] reason={reason}, epoch={epoch+1}, "
+   388                                                                   f"lr -> {new_lr:.6f}, freeze_mu={self.soft_landing_config.freeze_mu}"
+   389                                                               )
+   390                                           
+   391         2       2074.0   1037.0      0.0              stability_phase_ok = (not self.stability_config.phase3_only) or (phase == 3)
+   392         2       3285.0   1642.5      0.0              cooldown_ok = (epoch - last_lr_decay_epoch) >= self.stability_config.lr_decay_cooldown_epochs
+   393         2       1645.0    822.5      0.0              decay_budget_ok = lr_decay_events < self.stability_config.max_lr_decay_events
+   394                                                       if (
+   395         2       2902.0   1451.0      0.0                  level_div > self.stability_config.level_divergence_threshold
+   396                                                           and stability_phase_ok
+   397                                                           and (
+   398                                                               (not self.stability_config.skip_lr_decay_if_recovery_triggered)
+   399                                                               or (not recovery_triggered_this_epoch)
+   400                                                           )
+   401                                                       ):
+   402                                                           divergence_streak += 1
+   403                                                           if cooldown_ok and decay_budget_ok:
+   404                                                               lr_before_stability = float(self.optimizer.get_lr())
+   405                                                               new_lr = max(
+   406                                                                   self.stability_config.min_lr,
+   407                                                                   lr_before_stability * self.stability_config.lr_decay_on_divergence,
+   408                                                               )
+   409                                                               self.optimizer.set_lr(new_lr)
+   410                                                               lr_decay_events += 1
+   411                                                               last_lr_decay_epoch = epoch
+   412                                                               self.history['events'].append(
+   413                                                                   {
+   414                                                                       'type': 'stability_lr_decay',
+   415                                                                       'epoch': int(epoch + 1),
+   416                                                                       'level_divergence': float(level_div),
+   417                                                                       'lr_before': lr_before_stability,
+   418                                                                       'lr_after': float(new_lr),
+   419                                                                       'event_index': int(lr_decay_events),
+   420                                                                   }
+   421                                                               )
+   422                                                               if self.verbose:
+   423                                                                   print(
+   424                                                                       f"[stability] level_div={level_div:.3f} > "
+   425                                                                       f"{self.stability_config.level_divergence_threshold:.3f}; "
+   426                                                                       f"lr -> {new_lr:.6f} (event {lr_decay_events}/{self.stability_config.max_lr_decay_events})"
+   427                                                                   )
+   428                                                       else:
+   429         2       1213.0    606.5      0.0                  divergence_streak = 0
+   430                                           
+   431                                                       # Affichage
+   432         2       1432.0    716.0      0.0              if self.verbose:
+   433                                                           msg = f"Epoch {epoch+1}: loss={epoch_loss:.3f}, acc={accuracy:.3f}"
+   434                                                           msg += f", level_acc={['{:.3f}'.format(a) for a in level_accuracy]}"
+   435                                                           msg += f", level_div={level_div:.3f}, lr={self.optimizer.get_lr():.6f}"
+   436                                                           if val_accuracy is not None:
+   437                                                               msg += f", val_acc={val_accuracy:.3f}"
+   438                                                           print(msg)
+   439                                           
+   440         2       2407.0   1203.5      0.0              if self.stability_config.early_stop_on_divergence and divergence_streak >= self.stability_config.divergence_patience:
+   441                                                           if self.verbose:
+   442                                                               print(
+   443                                                                   f"[early-stop] divergence streak={divergence_streak} "
+   444                                                                   f"(threshold={self.stability_config.level_divergence_threshold:.3f})"
+   445                                                               )
+   446                                                           break
+   447                                           
+   448         2       1514.0    757.0      0.0              prev_level_div = level_div
+   449                                           
+   450         1       1098.0   1098.0      0.0          if self.verbose:
+   451                                                       print("\n" + "="*70)
+   452                                                       print("Training completed")
+   453                                                       print(f"Final accuracy: {self.history['accuracy'][-1]:.3f}")
+   454                                                       print("="*70)
+   455                                           
+   456         1      15600.0  15600.0      0.0          return self.history
+
+Total time: 73.4941 s
+File: /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/dynamics/integrator.py
+Function: ODEIntegrator.integrate at line 147
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   147                                               def integrate(self, initial_states, return_trajectory=False):
+   148                                                   """
+   149                                                   Intègre le système jusqu'à convergence.
+   150                                           
+   151                                                   Args:
+   152                                                       initial_states (list[torch.Tensor]): États initiaux
+   153                                                       return_trajectory (bool): Si True, retourne toute la trajectoire
+   154                                           
+   155                                                   Returns:
+   156                                                       tuple: (final_states, n_steps, converged, trajectory)
+   157                                                           - final_states : États finaux
+   158                                                           - n_steps : Nombre d'itérations
+   159                                                           - converged : True si convergence atteinte
+   160                                                           - trajectory : Liste des états si return_trajectory=True
+   161                                                   """
+   162        85     142773.0   1679.7      0.0          if self.method == 'adjoint':
+   163                                                       return self.integrate_adjoint(initial_states, return_trajectory=return_trajectory)
+   164                                           
+   165        85      42032.0    494.5      0.0          states = initial_states
+   166        85      65436.0    769.8      0.0          trajectory = [states] if return_trajectory else []
+   167                                           
+   168        85      43982.0    517.4      0.0          converged = False
+   169                                           
+   170      3485    2410816.0    691.8      0.0          for step in range(self.max_steps):
+   171                                                       # Un pas d'intégration
+   172      3400    3044082.0    895.3      0.0              if self.method == 'euler':
+   173                                                           new_states = self.step_euler(states)
+   174      3400    1622037.0    477.1      0.0              elif self.method == 'rk4':
+   175      3400     4.17e+10 1.23e+07     56.7                  new_states = self.step_rk4(states)
+   176                                                       else:
+   177                                                           raise ValueError(f"Unknown method: {self.method}")
+   178                                           
+   179                                                       # Critère de convergence : ||dx/dt|| < tol à tous les niveaux
+   180      3400    2045830.0    601.7      0.0              max_velocity = 0.0
+   181     13600   14942189.0   1098.7      0.0              for x_old, x_new in zip(states, new_states):
+   182     10200  182253531.0  17868.0      0.2                  dx = x_new - x_old
+   183     10200  669021008.0  65590.3      0.9                  velocity = torch.norm(dx) / self.dt
+   184     10200     3.09e+10 3.03e+06     42.1                  max_velocity = max(max_velocity, velocity.item())
+   185                                           
+   186      3400    2904812.0    854.4      0.0              if max_velocity < self.tol:
+   187                                                           converged = True
+   188                                                           states = new_states
+   189                                                           if return_trajectory:
+   190                                                               trajectory.append(states)
+   191                                                           break
+   192                                           
+   193      3400    2647942.0    778.8      0.0              states = new_states
+   194                                           
+   195      3400    1437770.0    422.9      0.0              if return_trajectory:
+   196      3200    2642606.0    825.8      0.0                  trajectory.append(states)
+   197                                           
+   198        85     204482.0   2405.7      0.0          return states, step + 1, converged, trajectory
+
+Total time: 41.5726 s
+File: /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/dynamics/integrator.py
+Function: ODEIntegrator.step_rk4 at line 114
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   114                                               def step_rk4(self, states):
+   115                                                   """
+   116                                                   Un pas d'intégration Runge-Kutta 4.
+   117                                           
+   118                                                   Args:
+   119                                                       states (list[torch.Tensor]): États courants
+   120                                           
+   121                                                   Returns:
+   122                                                       list[torch.Tensor]: Nouveaux états
+   123                                                   """
+   124                                                   # k1 = F(x)
+   125      3400 9946018904.0 2.93e+06     23.9          k1 = self.velocity_field(states)
+   126                                           
+   127                                                   # k2 = F(x + dt/2 * k1)
+   128      3400  293961194.0  86459.2      0.7          states_k2 = [x + 0.5 * self.dt * v for x, v in zip(states, k1)]
+   129      3400     1.01e+10 2.97e+06     24.3          k2 = self.velocity_field(states_k2)
+   130                                           
+   131                                                   # k3 = F(x + dt/2 * k2)
+   132      3400  288677490.0  84905.1      0.7          states_k3 = [x + 0.5 * self.dt * v for x, v in zip(states, k2)]
+   133      3400 9951285995.0 2.93e+06     23.9          k3 = self.velocity_field(states_k3)
+   134                                           
+   135                                                   # k4 = F(x + dt * k3)
+   136      3400  286233609.0  84186.4      0.7          states_k4 = [x + self.dt * v for x, v in zip(states, k3)]
+   137      3400 9759554937.0 2.87e+06     23.5          k4 = self.velocity_field(states_k4)
+   138                                           
+   139                                                   # x_new = x + dt/6 * (k1 + 2*k2 + 2*k3 + k4)
+   140      3400    1741716.0    512.3      0.0          new_states = []
+   141     13600   15490116.0   1139.0      0.0          for x, v1, v2, v3, v4 in zip(states, k1, k2, k3, k4):
+   142     10200  935338671.0  91699.9      2.2              x_new = x + (self.dt / 6.0) * (v1 + 2*v2 + 2*v3 + v4)
+   143     10200    5237632.0    513.5      0.0              new_states.append(x_new)
+   144                                           
+   145      3400    6659214.0   1958.6      0.0          return new_states
+
+Total time: 38.8275 s
+File: /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/dynamics/integrator.py
+Function: ODEIntegrator.compute_forces at line 55
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+    55                                               def compute_forces(self, states):
+    56                                                   """
+    57                                                   Calcule toutes les forces à l'instant t.
+    58                                           
+    59                                                   Args:
+    60                                                       states (list[torch.Tensor]): États [x^(0), ..., x^(L)]
+    61                                           
+    62                                                   Returns:
+    63                                                       list[torch.Tensor]: Forces [F^(0), ..., F^(L)]
+    64                                                   """
+    65     13600    9944028.0    731.2      0.0          forces = []
+    66                                           
+    67     54400  210029809.0   3860.8      0.5          for l, level in enumerate(self.levels):
+    68                                                       # Force intra-niveau
+    69     40800     2.68e+10 657871.5     69.1              f_intra = level.intra_level_force(states[l])
+    70                                           
+    71                                                       # Forces de couplage
+    72     40800     1.12e+10 275008.0     28.9              f_coupling = self.coupling.total_force(states, l)
+    73                                           
+    74                                                       # Force totale
+    75     40800  500762310.0  12273.6      1.3              f_total = f_intra + f_coupling
+    76                                           
+    77     40800   31655614.0    775.9      0.1              forces.append(f_total)
+    78                                           
+    79     13600   13591660.0    999.4      0.0          return forces
+
+Total time: 0 s
+File: /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/dynamics/level.py
+Function: Level.intra_level_force at line 121
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   121                                               def intra_level_force(self, x):
+   122                                                   """
+   123                                                   Calcule F_intra(x) = -∇E^(l)(x).
+   124                                           
+   125                                                   F_intra = Σ F_att(propre classe) - λ Σ F_rep(autres classes)
+   126                                           
+   127                                                   Args:
+   128                                                       x (torch.Tensor): État au niveau l (..., dim)
+   129                                           
+   130                                                   Returns:
+   131                                                       torch.Tensor: Force intra-niveau (..., dim)
+   132                                                   """
+   133                                                   force = torch.zeros_like(x)
+   134                                           
+   135                                                   # Pour chaque classe
+   136                                                   for c in range(self.n_classes):
+   137                                                       for attractor in self.attractors[str(c)]:
+   138                                                           # Attraction de tous les attracteurs
+   139                                                           force += attractor.attraction_force(x)
+   140                                           
+   141                                                           # Répulsion des attracteurs d'autres classes
+   142                                                           # Note : appliquée comme terme négatif dans F_att
+   143                                                           # Ici on les traite séparément via lambda_repulsion
+   144                                           
+   145                                                   # Application du terme répulsif (simplifié)
+   146                                                   # Dans la spec complète, il faudrait distinguer classe par classe
+   147                                                   # Ici on applique une répulsion globale pondérée par λ
+   148                                                   force_rep = torch.zeros_like(x)
+   149                                                   for c in range(self.n_classes):
+   150                                                       for attractor in self.attractors[str(c)]:
+   151                                                           force_rep += attractor.repulsion_force(x)
+   152                                           
+   153                                                   force = force + self.lambda_repulsion * force_rep
+   154                                           
+   155                                                   return force
+
+Total time: 0 s
+File: /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/dynamics/level.py
+Function: Level.predict_class_scores at line 179
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   179                                               def predict_class_scores(self, x):
+   180                                                   """
+   181                                                   Calcule les scores d'attraction par classe (pour prédiction).
+   182                                           
+   183                                                   Score(c) = Σ_m w_{c,m} * exp(-||x - μ_{c,m}||²/(2σ²))
+   184                                           
+   185                                                   Args:
+   186                                                       x (torch.Tensor): État (..., dim)
+   187                                           
+   188                                                   Returns:
+   189                                                       torch.Tensor: Scores (..., n_classes)
+   190                                                   """
+   191                                                   batch_shape = x.shape[:-1]
+   192                                                   scores = torch.zeros(*batch_shape, self.n_classes, device=x.device)
+   193                                           
+   194                                                   for c in range(self.n_classes):
+   195                                                       for attractor in self.attractors[str(c)]:
+   196                                                           scores[..., c] += attractor.attraction_strength(x)
+   197                                           
+   198                                                   return scores
+
+Total time: 0 s
+File: /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/dynamics/attractor.py
+Function: Attractor.attraction_force at line 62
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+    62                                               def attraction_force(self, x):
+    63                                                   """
+    64                                                   Calcule la force d'attraction F_att(x) = (w/σ²)(μ - x) * K_σ(x).
+    65                                           
+    66                                                   Args:
+    67                                                       x (torch.Tensor): État (..., dim)
+    68                                           
+    69                                                   Returns:
+    70                                                       torch.Tensor: Force (..., dim)
+    71                                                   """
+    72                                                   delta = self.position - x  # (..., dim)
+    73                                                   dist_sq = torch.sum(delta ** 2, dim=-1, keepdim=True)  # (..., 1)
+    74                                           
+    75                                                   sigma_sq = self.sigma ** 2
+    76                                                   kernel = torch.exp(-dist_sq / (2 * sigma_sq))  # (..., 1)
+    77                                           
+    78                                                   force = (self.weight / sigma_sq) * delta * kernel  # (..., dim)
+    79                                                   return force
+
+Total time: 0 s
+File: /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/dynamics/attractor.py
+Function: Attractor.repulsion_force at line 81
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+    81                                               def repulsion_force(self, x):
+    82                                                   """
+    83                                                   Calcule la force de répulsion F_rep(x) = -(w/ρ²)(μ - x) * K_ρ(x).
+    84                                           
+    85                                                   Args:
+    86                                                       x (torch.Tensor): État (..., dim)
+    87                                           
+    88                                                   Returns:
+    89                                                       torch.Tensor: Force (..., dim)
+    90                                                   """
+    91                                                   delta = self.position - x  # (..., dim)
+    92                                                   dist_sq = torch.sum(delta ** 2, dim=-1, keepdim=True)  # (..., 1)
+    93                                           
+    94                                                   rho_sq = self.rho ** 2
+    95                                                   kernel = torch.exp(-dist_sq / (2 * rho_sq))  # (..., 1)
+    96                                           
+    97                                                   force = -(self.weight / rho_sq) * delta * kernel  # (..., dim)
+    98                                                   return force
+
+Total time: 0 s
+File: /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/haml/dynamics/attractor.py
+Function: Attractor.attraction_strength at line 118
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   118                                               def attraction_strength(self, x):
+   119                                                   """
+   120                                                   Calcule la force d'attraction normalisée (pour prédiction).
+   121                                           
+   122                                                   Args:
+   123                                                       x (torch.Tensor): État (..., dim)
+   124                                           
+   125                                                   Returns:
+   126                                                       torch.Tensor: Force scalaire (...) ≥ 0
+   127                                                   """
+   128                                                   delta = self.position - x
+   129                                                   dist_sq = torch.sum(delta ** 2, dim=-1)  # (...)
+   130                                           
+   131                                                   sigma_sq = self.sigma ** 2
+   132                                                   strength = self.weight * torch.exp(-dist_sq / (2 * sigma_sq))
+   133                                           
+   134                                                   return strength
+
+Total time: 145.3 s
+File: /kaggle/working/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING/experiments/profile_training_runtime.py
+Function: run_probe at line 140
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   140                                           def run_probe(args):
+   141         1       4795.0   4795.0      0.0      phase1_epochs = max(0, min(args.phase1_epochs, args.n_epochs))
+   142         1       1553.0   1553.0      0.0      phase2_epochs = max(0, min(args.phase2_epochs, max(0, args.n_epochs - phase1_epochs)))
+   143         1       1289.0   1289.0      0.0      alpha_bu, alpha_td = (0.0, 0.0) if args.mode == "independent" else (0.5, 1.5)
+   144                                           
+   145         1    2213444.0 2.21e+06      0.0      set_seed(args.seed)
+   146         1       2760.0   2760.0      0.0      if args.dataset == "fashion_mnist":
+   147         1 5788411185.0 5.79e+09      4.0          X_train, X_test, y_train, y_test = load_fashion_mnist_subset(args.n_train, args.n_test, args.seed)
+   148         1        974.0    974.0      0.0          level_dims = None
+   149                                               else:
+   150                                                   X_train, X_test, y_train, y_test = load_moons_subset(args.n_train, args.n_test, args.seed, args.noise)
+   151                                                   level_dims = [2, 2]
+   152                                           
+   153         2     580751.0 290375.5      0.0      model = HAML(
+   154         1        756.0    756.0      0.0          n_levels=3,
+   155         1        536.0    536.0      0.0          level_dims=level_dims,
+   156         1       4184.0   4184.0      0.0          n_attractors_per_class=args.n_attractors_per_class,
+   157         1        492.0    492.0      0.0          alpha_bu=alpha_bu,
+   158         1        888.0    888.0      0.0          alpha_td=alpha_td,
+   159         1       1428.0   1428.0      0.0          use_vectorized_levels=args.use_vectorized_levels,
+   160         1       1230.0   1230.0      0.0          repulsion_mode=args.repulsion_mode,
+   161         1        896.0    896.0      0.0          max_steps=args.max_steps,
+   162         1       1201.0   1201.0      0.0          tol=args.tol,
+   163         1       1200.0   1200.0      0.0          lr=args.lr,
+   164         1        728.0    728.0      0.0          n_epochs=args.n_epochs,
+   165         1        908.0    908.0      0.0          batch_size=args.batch_size,
+   166         1        502.0    502.0      0.0          train_on_fit=False,
+   167         1        769.0    769.0      0.0          device=args.device,
+   168                                               )
+   169         1 3628391795.0 3.63e+09      2.5      model.fit(X_train, y_train)
+   170         1     825697.0 825697.0      0.0      trainer = build_trainer(model, args.n_epochs, phase1_epochs, phase2_epochs)
+   171                                           
+   172         1       2202.0   2202.0      0.0      train_start = time.perf_counter()
+   173         1     1.34e+11 1.34e+11     92.4      history = trainer.train(X_train, y_train)
+   174         1       4819.0   4819.0      0.0      train_time_sec = time.perf_counter() - train_start
+   175         1 1626750857.0 1.63e+09      1.1      test_acc = model.score(X_test, y_test)
+   176                                           
+   177         1       3635.0   3635.0      0.0      return {
+   178         1       1205.0   1205.0      0.0          "train_time_sec": float(train_time_sec),
+   179         1        451.0    451.0      0.0          "test_accuracy": float(test_acc),
+   180         1       2005.0   2005.0      0.0          "final_train_accuracy": float(history["accuracy"][-1]) if history["accuracy"] else None,
+   181         1       1924.0   1924.0      0.0          "n_history_epochs": int(len(history["accuracy"])),
+   182                                               }
+
