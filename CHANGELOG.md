@@ -21,6 +21,15 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 - Compatibilité trainer renforcée (`_freeze_mu_positions`) pour gérer les niveaux vectorisés.
 - Ajout de tests d'invariance numériques `tests/test_level_vectorized_invariants.py` (forward + backward).
 - Ajout d'un micro-benchmark dédié `experiments/level_vectorized_micro_benchmark.py`.
+- Intégrateur ODE optimisé pour limiter les synchronisations CPU/GPU :
+  - nouveau paramètre `convergence_check_every` (défaut `5`),
+  - check de convergence optionnel (`tol=None` pour le désactiver),
+  - test d'invariance ajouté: `tests/test_integrator_convergence_checks.py`
+    (équivalence `K=1` avec la logique historique + validation `tol=None`).
+- `HAML` expose désormais `convergence_check_every` et le script
+  `experiments/profile_training_runtime.py` accepte :
+  - `--convergence-check-every`,
+  - `--disable-convergence-check`.
 
 ### Modifié - 2026-05-17
 - Campagne F (Fashion-MNIST) complétée avec comparaison `coupled_tuned` vs `independent` sur seeds `42..46` :
