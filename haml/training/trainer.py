@@ -485,6 +485,9 @@ class HAMLTrainer:
     def _freeze_mu_positions(self):
         """GÃ¨le les positions des attracteurs (mu) pour limiter la dÃ©rive tardive."""
         for level in self.model.levels:
+            if hasattr(level, "freeze_positions"):
+                level.freeze_positions()
+                continue
             for c in range(level.n_classes):
                 for attractor in level.attractors[str(c)]:
                     attractor.position.requires_grad_(False)

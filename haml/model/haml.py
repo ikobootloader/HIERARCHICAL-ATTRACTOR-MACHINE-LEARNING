@@ -12,7 +12,7 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.preprocessing import StandardScaler
 
 from ..projection import HierarchicalSpaces
-from ..dynamics import Level, BidirectionalCoupling, ODEIntegrator
+from ..dynamics import Level, LevelVectorized, BidirectionalCoupling, ODEIntegrator
 from ..training import (
     HAMLLoss,
     ConstrainedOptimizer,
@@ -73,6 +73,8 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
         batch_size=32,
         train_on_fit=False,
         level_score_weighting='exponential',
+        use_vectorized_levels=False,
+        repulsion_mode='global',
         device='auto'
     ):
         """
@@ -122,6 +124,8 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
         self.batch_size = batch_size
         self.train_on_fit = train_on_fit
         self.level_score_weighting = level_score_weighting
+        self.use_vectorized_levels = use_vectorized_levels
+        self.repulsion_mode = repulsion_mode
 
         # Modules (initialisés dans fit)
         self.scaler = StandardScaler()
@@ -177,14 +181,25 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
         self.levels = nn.ModuleList()
 
         for l, dim in enumerate(all_dims):
-            level = Level(
-                level_idx=l,
-                dim=dim,
-                n_classes=self.n_classes_,
-                n_attractors_per_class=self.n_attractors_per_class,
-                lambda_repulsion=self.lambda_repulsion,
-                rho_sigma_ratio=self.rho_sigma_ratio
-            ).to(self.device)
+            if self.use_vectorized_levels:
+                level = LevelVectorized(
+                    level_idx=l,
+                    dim=dim,
+                    n_classes=self.n_classes_,
+                    n_attractors_per_class=self.n_attractors_per_class,
+                    lambda_repulsion=self.lambda_repulsion,
+                    rho_sigma_ratio=self.rho_sigma_ratio,
+                    repulsion_mode=self.repulsion_mode,
+                ).to(self.device)
+            else:
+                level = Level(
+                    level_idx=l,
+                    dim=dim,
+                    n_classes=self.n_classes_,
+                    n_attractors_per_class=self.n_attractors_per_class,
+                    lambda_repulsion=self.lambda_repulsion,
+                    rho_sigma_ratio=self.rho_sigma_ratio
+                ).to(self.device)
             self.levels.append(level)
 
         # Initialisation des attracteurs
@@ -456,6 +471,8 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
             'mu_sep': self.mu_sep,
             'mu_dyn': self.mu_dyn,
             'level_score_weighting': self.level_score_weighting,
+            'use_vectorized_levels': self.use_vectorized_levels,
+            'repulsion_mode': self.repulsion_mode,
             'device': self.device
         }
 
