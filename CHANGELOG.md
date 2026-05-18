@@ -30,6 +30,18 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
   `experiments/profile_training_runtime.py` accepte :
   - `--convergence-check-every`,
   - `--disable-convergence-check`.
+- Ajout d'un scheduler `max_steps` par phase d'entraînement (sans modifier
+  l'intégrateur) via `PhaseConfig` :
+  - `phase1_max_steps`,
+  - `phase2_max_steps`,
+  - `phase3_max_steps`.
+- `HAMLTrainer` logue désormais par epoch :
+  - `convergence_fraction` (fraction moyenne de samples sous tolérance),
+  - `phase_max_steps` (budget de pas effectivement appliqué).
+- `experiments/profile_training_runtime.py` expose les nouveaux paramètres :
+  - `--phase1-max-steps` (défaut `50`),
+  - `--phase2-max-steps` (défaut `80`),
+  - `--phase3-max-steps` (défaut `100`).
 
 ### Modifié - 2026-05-17
 - Campagne F (Fashion-MNIST) complétée avec comparaison `coupled_tuned` vs `independent` sur seeds `42..46` :

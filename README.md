@@ -60,6 +60,9 @@ Notes de configuration :
   dans l'intégrateur ODE (défaut `5`).
 - `tol=None` permet de désactiver complètement l'arrêt anticipé de convergence
   (intégration systématique jusqu'à `max_steps`).
+- Le planning d'entraînement supporte un budget de pas par phase :
+  - `phase1_max_steps`, `phase2_max_steps`, `phase3_max_steps`
+  (utile pour réduire la profondeur de graphe en début d'entraînement).
 
 ## Architecture
 
@@ -147,6 +150,8 @@ Commande de profilage pipeline cible (si accès OpenML) :
 - `python experiments/profile_training_runtime.py --dataset fashion_mnist --n-train 5000 --n-test 1000 --n-epochs 2 --max-steps 40 --out-dir experiments/profile_runtime_fashion`
 - variante avec contrôle convergence :
 - `python experiments/profile_training_runtime.py --dataset fashion_mnist --n-train 5000 --n-test 1000 --n-epochs 2 --max-steps 40 --use-vectorized-levels --convergence-check-every 5 --out-dir experiments/profile_runtime_fashion_vectorized_k5`
+- variante scheduler max_steps par phase (conservatrice) :
+- `python experiments/profile_training_runtime.py --dataset fashion_mnist --n-train 5000 --n-test 1000 --n-epochs 2 --phase1-epochs 1 --phase2-epochs 1 --phase1-max-steps 50 --phase2-max-steps 80 --phase3-max-steps 100 --use-vectorized-levels --convergence-check-every 5 --out-dir experiments/profile_runtime_fashion_vectorized_sched_50_80_100`
 
 Micro-benchmark vectorisation niveau (CPU/GPU) :
 - `python experiments/level_vectorized_micro_benchmark.py --batch-size 125 --dim 784 --n-classes 10 --n-attractors 2 --device cpu --out-json experiments/diag_level_vectorized_micro_benchmark_cpu.json`
