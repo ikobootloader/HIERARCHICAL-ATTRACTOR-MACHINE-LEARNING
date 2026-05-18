@@ -14,6 +14,13 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 - Le script supporte deux modes dataset :
   - `make_moons` (local, sans dépendance réseau) pour smoke-tests rapides,
   - `fashion_mnist` (OpenML) pour profilage du pipeline cible quand le réseau est disponible.
+- Ajout d'un niveau vectorisé `haml/dynamics/level_vectorized.py` (stockage par tenseurs plats) avec compatibilité API `attractors` via vues :
+  - nouveau flag `HAML(..., use_vectorized_levels=True)` pour activer la version vectorisée,
+  - option `repulsion_mode` ajoutée (`global` par défaut, `inter_class_only` disponible),
+  - intégration conservatrice : comportement par défaut inchangé (`use_vectorized_levels=False`).
+- Compatibilité trainer renforcée (`_freeze_mu_positions`) pour gérer les niveaux vectorisés.
+- Ajout de tests d'invariance numériques `tests/test_level_vectorized_invariants.py` (forward + backward).
+- Ajout d'un micro-benchmark dédié `experiments/level_vectorized_micro_benchmark.py`.
 
 ### Modifié - 2026-05-17
 - Campagne F (Fashion-MNIST) complétée avec comparaison `coupled_tuned` vs `independent` sur seeds `42..46` :

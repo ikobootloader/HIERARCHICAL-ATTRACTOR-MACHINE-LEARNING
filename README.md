@@ -52,6 +52,10 @@ Notes de configuration :
   de la portée de répulsion (`rho_init = rho_sigma_ratio * sigma_init`).
 - `level_score_weighting` contrôle l'agrégation multi-niveaux
   (`'exponential'` par défaut, option `'uniform'`).
+- `use_vectorized_levels=True` active un niveau dynamique vectorisé
+  (accélération forward/backward, comportement par défaut inchangé si `False`).
+- `repulsion_mode` contrôle la sémantique de répulsion dans le niveau vectorisé
+  (`'global'` par défaut, option `'inter_class_only'`).
 
 ## Architecture
 
@@ -137,6 +141,9 @@ Commande de profilage recommandée (locale, sans réseau) :
 
 Commande de profilage pipeline cible (si accès OpenML) :
 - `python experiments/profile_training_runtime.py --dataset fashion_mnist --n-train 5000 --n-test 1000 --n-epochs 2 --max-steps 40 --out-dir experiments/profile_runtime_fashion`
+
+Micro-benchmark vectorisation niveau (CPU/GPU) :
+- `python experiments/level_vectorized_micro_benchmark.py --batch-size 125 --dim 784 --n-classes 10 --n-attractors 2 --device cpu --out-json experiments/diag_level_vectorized_micro_benchmark_cpu.json`
 
 ### Campagne A - MNIST subset (1500/500, 5 epochs)
 
