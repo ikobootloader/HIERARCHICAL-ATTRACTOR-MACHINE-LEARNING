@@ -1,0 +1,1728 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[protrusion=true,expansion=false]{microtype}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{amsthm}
+\usepackage{graphicx}
+\usepackage{cite}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{authblk}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{xurl}
+
+%% Theorem environments
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{conjecture}[theorem]{Conjecture}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!50!black,
+  citecolor=blue!50!black,
+  urlcolor=blue!50!black,
+}
+
+\title{HAML: Hierarchical Attractor Machine Learning\\
+with Bidirectional Coupling for Supervised Classification\\[0.5em]
+\large A Preliminary Investigation}
+
+\author{Frederick Murat}
+\affil{Independent Researcher \\ \texttt{contact via GitHub: ikobootloader}}
+
+\date{May 2026 (v5)}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+We introduce HAML (Hierarchical Attractor Machine Learning), an exploratory supervised
+classification framework in which classification emerges from the convergence of a coupled
+dissipative dynamical system toward stable basins of attraction across multiple
+hierarchical levels. Each level operates in a PCA-decomposed subspace of decreasing
+dimension; levels are coupled through bottom-up (error-prediction) and top-down
+(context-prediction) feedback flows inspired by Predictive Coding.
+
+\textbf{Primary contributions.}
+The paper makes two contributions we consider robust, and several theoretical
+observations that we present with explicit caveats:
+\begin{itemize}
+  \item \textbf{Architectural} (Sections~\ref{sec:architecture}--\ref{sec:learning}): a
+        specific assembly of hierarchical PCA subspaces, gradient-learned continuous
+        Gaussian attractors, and bidirectional PC-style coupling, trained end-to-end
+        with a three-phase progressive schedule. The combination is original
+        (Section~\ref{sec:related}) even though each individual primitive has direct
+        antecedents.
+  \item \textbf{Practical (Condition I1)} (Section~\ref{sec:i1}): a dimension-scaled
+        kernel initialisation $\sigma_{\mathrm{init}}^{(l)} = \sqrt{d_l}\cdot\sigma_{\mathrm{data}}^{(l)}$
+        that prevents Gaussian-kernel saturation in high dimension and is empirically
+        \emph{necessary} for the framework to train beyond $\sim$20 dimensions
+        (Table~\ref{tab:kernelfix}). Without~I1, gradient magnitudes collapse to zero
+        and learning halts.
+\end{itemize}
+
+\textbf{Theoretical observations (with caveats).}
+We present four theoretical observations that, on close inspection, are either
+specialisations of standard results or carry significant qualifications. We state these
+caveats upfront because they affect how the results should be read:
+\begin{itemize}
+  \item Proposition~\ref{prop:convergence} (dissipative convergence via LaSalle) is a
+        standard property of any damped gradient flow with a bounded-below energy; in
+        HAML, it justifies the ODE stopping criterion rather than constituting a deep
+        result.
+  \item Proposition~\ref{prop:dimindep} (dimension-independent local rate at fixed
+        points) is mathematically correct but stands in \emph{tension} with
+        Condition~I1, which itself scales $\sigma^2 \propto d_l$. The two together
+        imply that the local rate scales as $1/d_l$ in practice; the result describes
+        a property of the linearised regime, not a global dimension-independence
+        guarantee.
+  \item Proposition~\ref{prop:expressivity} (exponential expressivity gain in
+        attractor count) is a worst-case representational statement; our experiments
+        all use $L \in \{2, 3\}$, so the exponential factor is not empirically
+        exercised.
+  \item Theorem~\ref{thm:map} (MAP equivalence with hierarchical PC under M1--M3)
+        requires $\lambda = 0$, i.e.\ \emph{disabling the repulsive terms} that are
+        otherwise central to HAML. In the operational regime ($\lambda > 0$), the
+        energy decomposes as $\mathcal{E} = \mathcal{F}_{\mathrm{PC}} + \lambda\,\mathcal{F}_{\mathrm{discrim}}$,
+        which is a PC--inference / contrastive-discriminative hybrid. The exact MAP
+        correspondence applies only to a reduced version of the model.
+\end{itemize}
+The principled lesson is that HAML's theoretical scaffolding is a coherent
+\emph{specialisation} of established frameworks (LaSalle stability, neural-ODE
+generalisation theory, PC--inference correspondences), not a foundational
+contribution. We restate this explicitly in Section~\ref{sec:theory}.
+
+\textbf{Empirical results (honest summary).}
+Six campaigns across synthetic and real datasets. We summarise each with its actual
+statistical status:
+\begin{itemize}
+  \item On a MNIST subset (1500 train / 500 test, 5 epochs), gradient training raises
+        accuracy from $45.6\%$ (k-means-only init) to $75.8\%$. \textbf{Bidirectional
+        coupling provides no measurable gain} ($75.8\%$ coupled vs.\ $75.8\%$
+        independent). This is a direct empirical \emph{counter-observation} to the
+        thesis that coupling is universally beneficial.
+  \item On alternating concentric rings (5 seeds), coupled HAML reaches
+        $71.20\% \pm 6.43$ vs.\ $67.30\% \pm 4.37$ for the independent variant. The
+        $+3.90$~pts mean difference is \emph{not statistically significant} at $n=5$,
+        though the qualitative shift to ring-aligned decision boundaries is robust
+        across all five seeds.
+  \item On noisy moons (\textbf{single seed}), coupling helps at intermediate noise
+        ($+6.27$~pts at noise $0.20$). Multi-seed validation pending.
+  \item On Fashion-MNIST (784D, 10 classes, single seed, 10 epochs), test accuracy
+        reaches $80.1\%$, \emph{below standard neural baselines}. The result
+        demonstrates stable training in 784D (enabled by~I1), not competitive accuracy.
+  \item A controlled internal reimplementation of SA-nODE is dominated by HAML across
+        noise levels (single seed; not using the authors' official code).
+\end{itemize}
+
+\textbf{What the empirical evidence actually supports.}
+(i)~Condition~I1 is necessary and sufficient for high-dimensional training. (ii)~The
+framework trains stably to 784D with the three-phase schedule. (iii)~Bidirectional
+coupling produces a qualitative geometric advantage on structurally non-convex problems
+(rings), but its quantitative accuracy benefit is regime-dependent and is
+\emph{negligible} on near-convex problems (MNIST). (iv)~The combinatorial novelty of
+the architecture is preserved; the foundational novelty of any individual building
+block is not.
+
+\textbf{Status of this work.} This is an exploratory preprint from an independent
+researcher. The code and configuration files needed to reproduce every reported number
+are open-source. We welcome external replication, criticism, and refutation.
+
+\textbf{Positioning.} HAML sits at the intersection of supervised attractor-based
+classification, hierarchical Predictive Coding, hierarchical associative memories, and
+implicit-depth/equilibrium models. We claim no individual-component novelty; the
+contribution is the specific instantiation. Detailed positioning is provided in
+Section~\ref{sec:related}.
+
+\textbf{Keywords:} Supervised learning, attractor dynamics, hierarchical classification,
+neural ODE, predictive coding, energy-based models, dynamical systems.
+\end{abstract}
+
+%% ============================================================
+\section{Introduction}
+%% ============================================================
+
+Supervised classification traditionally relies on static function approximation through
+neural networks or kernel methods. We explore an alternative perspective:
+\emph{classification as dynamic convergence}. Rather than computing a forward mapping
+$f : \mathcal{X} \to \mathcal{Y}$ in one pass, the model learns to position attractors
+(stable equilibrium points) in hierarchical latent subspaces so that unseen samples
+converge to basins corresponding to their true class under coupled gradient dynamics.
+
+This approach builds on four established research strands:
+\begin{itemize}
+  \item \textbf{Dynamical systems theory}: stable manifolds and attractor landscapes provide
+        geometrically interpretable decision boundaries.
+  \item \textbf{Predictive coding}~\cite{rao1999predictive,friston2005theory}: top-down
+        predictions correct bottom-up prediction errors across a generative hierarchy.
+  \item \textbf{Energy-based models}: classification emerges from minimisation of a learned
+        potential energy.
+  \item \textbf{Modern Hopfield networks}~\cite{ramsauer2021hopfield}: continuous attractors
+        replace discrete states for greater expressivity.
+\end{itemize}
+
+\subsection{Scope and Disclaimer}
+\label{sec:scope}
+
+We state upfront what this paper does and does not claim, to set expectations correctly.
+
+\textbf{Hierarchy of contributions.} The paper has two contributions we consider
+\emph{robust}:
+\begin{enumerate}
+  \item \textbf{Architectural} (Sections~\ref{sec:architecture}--\ref{sec:learning}):
+        the specific combination of hierarchical PCA-decomposed subspaces,
+        gradient-learned continuous Gaussian attractors, and bidirectional Predictive-
+        Coding-style coupling, together with the three-phase progressive training
+        schedule. The individual building blocks have direct antecedents
+        (Section~\ref{sec:related}); the assembly is what we contribute.
+  \item \textbf{Practical (Condition~I1)} (Section~\ref{sec:i1}): a dimension-scaled
+        kernel initialisation that is empirically \emph{necessary} for the framework
+        to function beyond $\sim$20 dimensions. Without~I1, Gaussian kernels saturate
+        and gradients vanish.
+\end{enumerate}
+
+We additionally present \emph{theoretical observations} (Section~\ref{sec:theory})
+which we make four important admissions about:
+\begin{enumerate}
+  \item Proposition~\ref{prop:convergence} (LaSalle dissipative convergence) is a
+        \emph{standard} property of damped gradient flows on energies bounded below;
+        in our framework, it serves to justify the ODE stopping criterion, not as a
+        deep result.
+  \item Proposition~\ref{prop:dimindep} (dimension-independent local rate) is in
+        explicit \emph{tension} with our Condition~I1: with $\sigma^2 \propto d_l$,
+        the scalar $\kappa^{(l)} = w/\sigma^2$ scales as $1/d_l$. The result
+        characterises a property of the linearised regime around a fixed point, not a
+        global dimension-independence guarantee.
+  \item Proposition~\ref{prop:expressivity} (exponential expressivity gain in
+        attractor count) is a worst-case representational statement; all our
+        experiments use $L \in \{2, 3\}$, so the exponential factor is not exercised.
+  \item Theorem~\ref{thm:map} (MAP equivalence with hierarchical PC) requires
+        $\lambda = 0$, i.e.\ \emph{disabling} the repulsive component that is
+        otherwise central to HAML. In the operational regime ($\lambda > 0$), HAML
+        implements a PC--inference / contrastive-discriminative hybrid, not exact
+        MAP inference.
+\end{enumerate}
+
+\textbf{What this paper does NOT claim.} (i)~State-of-the-art results on any benchmark.
+(ii)~A universal empirical advantage of bidirectional coupling: the evidence is
+\emph{mixed}, including a direct counter-observation on MNIST where the coupling
+provides no measurable gain. (iii)~Superiority over SA-nODE based on the authors'
+official code (we use a controlled internal reimplementation). (iv)~Multi-seed
+certification on real high-dimensional data. (v)~Foundational theoretical novelty:
+the theoretical components are specialisations of established results, not new
+results in themselves.
+
+\textbf{What we hope this paper offers.} A coherent, fully reproducible exploration of
+a specific architectural assembly at the intersection of four mature research strands,
+with an honest accounting of which components empirically pull their weight (the
+hierarchical PCA decomposition and Condition~I1 do; the bidirectional coupling does so
+only in some regimes), and a starting point for further investigation by others.
+
+\subsection{Related Work and Positioning}
+\label{sec:related}
+
+HAML sits at the intersection of four research strands. We position our contribution
+explicitly with respect to each, listing the closest prior work and the specific
+differences with our framework.
+
+\textbf{(i) Attractor-based supervised classification.} The idea of classifying via
+convergence to a basin of attraction has a long history. Amit and
+Mascaro~\cite{amit2001attractor} described a recurrent perceptron network in which each
+class is a pre-learned attractor of the recurrent dynamics, with the visual stimulus
+driving the system toward the correct class subset. Dense Associative
+Memory~\cite{krotov2016dense} and Modern Hopfield
+Networks~\cite{ramsauer2021hopfield} re-energised this line with continuous attractors and
+exponential storage capacity. Most directly,
+SA-nODE~\cite{marino2024} introduces a continuous-time supervised classifier with
+pre-planted stable attractors in a single ambient space, trained end-to-end as a Neural
+ODE~\cite{chen2018neural}. HAML differs from these by (a) operating in a
+\emph{hierarchy} of subspaces rather than a single ambient space, (b) learning
+\emph{continuous} attractor positions, widths, and repulsion radii by gradient descent
+rather than planting them analytically, and (c) introducing explicit inter-level
+coupling.
+
+\textbf{(ii) Hierarchical Predictive Coding.} Predictive Coding (PC) posits a
+hierarchical generative model with top-down predictions and bottom-up prediction
+errors~\cite{rao1999predictive,friston2005theory}.
+Spratling~\cite{spratling2017hierarchical} demonstrated that hierarchical PC can perform
+visual object recognition; Han et al.~\cite{han2018deep} introduced a deep bidirectional
+PC network with local recurrent processing whose internal representations \emph{converge
+over time} during classification on SVHN, CIFAR, and ImageNet --- structurally the
+closest prior work to HAML's bidirectional coupling. The mathematical relationship
+between PC and backpropagation has been studied in
+depth~\cite{whittington2017approximation,song2020can,salvatori2021exactbp}, with
+results showing that PC networks can approximate or exactly replicate backpropagation
+under specific conditions. HAML differs from this line by (a) framing the dynamics as a
+continuous-time dissipative system with explicit attractor structure rather than as a
+discrete recurrent network, (b) using PCA-based subspace decomposition between levels,
+and (c) reading out classification directly from basin membership rather than from
+top-layer activity.
+
+\textbf{(iii) Hierarchical associative memories.} Krotov~\cite{krotov2021hierarchical}
+introduced a fully recurrent associative memory model with an arbitrary number of layers
+and a Lyapunov energy function that decreases along the dynamics. Salvatori et
+al.~\cite{salvatori2021associative} realised associative memories via a hierarchical
+generative network trained by predictive coding, with retrieval framed as inference.
+Both are very close to HAML's hierarchical energy/attractor framing but target
+auto-associative memory and retrieval rather than supervised classification with
+class-specific basins.
+
+\textbf{(iv) Implicit-depth and equilibrium models.} Deep Equilibrium Models
+(DEQ)~\cite{bai2019deep} compute outputs as fixed points of an implicit
+transformation, with $O(1)$ memory via implicit differentiation; Multiscale Deep
+Equilibrium Models (MDEQ)~\cite{bai2020multiscale} extend this to hierarchical
+multi-resolution feature maps and achieve competitive results on ImageNet and
+Cityscapes. Monotone Operator Equilibrium Networks
+(monDEQ)~\cite{winston2020monotone} provide existence and uniqueness guarantees under
+monotonicity constraints. Generalisation bounds for neural ODEs have been derived via
+the Chen--Fliess series~\cite{hanson2024rademacher} and via path-norm
+arguments~\cite{marion2023generalization}. These works share with HAML the use of an
+implicit/continuous dynamics whose endpoint defines the output, but do not use a
+hierarchical attractor structure for class decision or a Predictive-Coding-style
+bidirectional coupling.
+
+\textbf{Where HAML sits.} We do not claim that any individual building block
+(attractors, hierarchical PC, energy minimisation, fixed-point computation, dimension-
+scaled kernels) is new. To our knowledge, we did not find a published model that
+combines simultaneously: (a) a supervised-classification objective with read-out by
+basin membership, (b) a hierarchy of subspaces obtained by PCA decomposition,
+(c) continuous attractors learned by gradient descent at every level, and
+(d) a bidirectional PC-style coupling between adjacent levels. HAML's contribution is
+this specific instantiation, together with the theoretical results that specialise to
+it. We treat the closeness of each building block to prior work explicitly when
+discussing limitations (Section~\ref{sec:discussion:limitations}).
+
+Table~\ref{tab:comparison_sanode} summarises the architectural differences with
+SA-nODE, the closest prior work in the
+\emph{supervised-attractor-classification-via-ODE} family.
+
+\begin{table}[h]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{lll}
+\toprule
+\textbf{Dimension} & \textbf{SA-nODE} & \textbf{HAML} \\
+\midrule
+State space             & Full input dim.\               & Hierarchy of decreasing subspaces \\
+Attractors              & Binary eigenvectors $\pm a$    & Continuous, gradient-optimised \\
+Potential               & Fixed double-well              & Parametric Gaussian mixture (with repulsion) \\
+Structure               & Single dynamic level           & $L$ bidirectionally coupled levels \\
+Coupling                & None                           & Bottom-up + top-down \\
+High-dim.\ training     & Dimension-dependent saturation & Stabilised by Condition~I1 (Sec.~\ref{sec:i1}) \\
+Theoretical anchor      & Statistical mechanics          & Dyn.\ systems + Predictive Coding \\
+PC/MAP correspondence   & Not established                & Holds for $\lambda{=}0$ subset (Thm.~\ref{thm:map}) \\
+\bottomrule
+\end{tabular}
+\caption{Architectural comparison with SA-nODE~\cite{marino2024}. We do not claim
+``dimension-independent convergence'' in this row, in line with the caveats on
+Proposition~\ref{prop:dimindep} (see Section~\ref{sec:theory:dimindep}).}
+\label{tab:comparison_sanode}
+\end{table}
+
+\subsection{Contributions}
+
+The contributions of this paper, in decreasing order of robustness:
+
+\begin{enumerate}
+  \item \textbf{Architectural assembly} (Section~\ref{sec:architecture}): the specific
+        combination of (a)~PCA-decomposed hierarchical state space, (b)~gradient-learned
+        continuous Gaussian attractors with explicit repulsion at every level, and
+        (c)~bidirectional PC-style inter-level coupling, trained end-to-end with a
+        three-phase progressive schedule. The combination is not present in the prior
+        work we reviewed.
+  \item \textbf{Condition~I1 (dimension-scaled kernel initialisation)}
+        (Section~\ref{sec:i1}): an empirically \emph{necessary} initialisation rule
+        $\sigma_{\mathrm{init}} \propto \sqrt{d_l}$ that prevents Gaussian-kernel
+        saturation in high dimension. Without~I1, gradient magnitudes vanish and HAML
+        cannot train beyond $\sim$20 dimensions (Table~\ref{tab:kernelfix}). This is
+        the contribution that most directly enables the framework to function on
+        real high-dimensional data.
+  \item \textbf{Practical training mechanisms}: the three-phase progressive coupling
+        schedule (Section~\ref{sec:three-phase}) and the heuristic level-aware
+        collapse-recovery mechanism (Section~\ref{sec:p6}).
+  \item \textbf{Preliminary empirical study}: 6 reproducible campaigns across
+        synthetic and real datasets, with explicit reporting of single-seed limitations
+        and missing baselines.
+  \item \textbf{Theoretical observations} (Section~\ref{sec:theory}): four results
+        --- dissipative convergence, local rate at fixed points, hierarchical
+        expressivity, MAP correspondence --- presented with the caveats stated in
+        Section~\ref{sec:scope} and explicit relations to prior work.
+  \item \textbf{Open reproducibility}: full source code at
+        \url{https://github.com/ikobootloader/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING}.
+\end{enumerate}
+
+%% ============================================================
+\section{Model Architecture and Dynamics}
+\label{sec:architecture}
+%% ============================================================
+
+\subsection{Hierarchical State Space}
+
+Let $\mathcal{X} \subset \mathbb{R}^d$ be the input space. We define a tower of linear
+projections:
+\begin{equation}
+  \mathcal{X} = \mathcal{H}_0
+  \xrightarrow{\pi_1} \mathcal{H}_1
+  \xrightarrow{\pi_2} \cdots
+  \xrightarrow{\pi_L} \mathcal{H}_L
+\end{equation}
+where $\mathcal{H}_l \subset \mathbb{R}^{d_l}$ with $d_0 > d_1 > \cdots > d_L$.
+
+Projections $\pi_l : \mathcal{H}_{l-1} \to \mathcal{H}_l$ are initialised by PCA (capturing
+maximum variance) and are optionally fine-tuned during training. Their Moore--Penrose
+pseudo-inverses $\pi_l^\dagger : \mathcal{H}_l \to \mathcal{H}_{l-1}$ serve as upward
+decoders.
+
+\begin{remark}[Contraction property]
+PCA projections normalised to unit spectral norm satisfy
+$\|\Pi_l\|_2 \le \sqrt{d_{l+1}/d_l} < 1$.
+This contraction is used in the convergence analysis (Section~\ref{sec:theory:convergence}).
+\end{remark}
+
+Initial conditions: $\mathbf{x}^{(l)}(0) = \pi_l \circ \cdots \circ \pi_1(\mathbf{x}_{\mathrm{input}})$.
+
+\subsection{Attractors and Energy Potential}
+
+At level $l$, we maintain $K \times M$ learnable attractors
+$\{\boldsymbol{\mu}^{(l)}_{c,m}\}_{c \in [K], m \in [M]}$
+with associated parameters $(\sigma^{(l)}_{c,m}, \rho^{(l)}_{c,m}, w^{(l)}_{c,m})$.
+The energy potential is a parametric attractor--repulsor mixture:
+
+\begin{equation}
+  E^{(l)}(\mathbf{x}) = -\sum_{c=1}^{K} \sum_{m=1}^{M} w_{c,m}^{(l)}
+    \exp\!\left(-\frac{\|\mathbf{x} - \boldsymbol{\mu}_{c,m}^{(l)}\|^2}
+                      {2(\sigma_{c,m}^{(l)})^2}\right)
+  + \lambda \sum_{c \ne c'} \sum_{m,m'} w_{c',m'}^{(l)}
+    \exp\!\left(-\frac{\|\mathbf{x} - \boldsymbol{\mu}_{c',m'}^{(l)}\|^2}
+                      {2(\rho_{c',m'}^{(l)})^2}\right)
+\label{eq:energy}
+\end{equation}
+
+\textbf{Bayesian interpretation} (anticipating Section~\ref{sec:theory:bayes}):
+without the repulsive terms ($\lambda=0$), $-E^{(l)}$ is proportional to the log of a
+Gaussian mixture, i.e.\ the log-prior $\log p(\mathbf{x}^{(l)})$ in the implicit generative
+model. Repulsive terms correspond to a discriminative contrastive
+prior~\cite{larochelle2008}.
+
+\subsection{Coupled Dynamics}
+
+At each level $l \in \{0, \ldots, L\}$, the state evolves under the coupled ODE:
+\begin{equation}
+  \dot{\mathbf{x}}^{(l)}(t) =
+  \mathbf{F}^{(l)}_{\mathrm{intra}}(\mathbf{x}^{(l)})
+  + \mathbf{F}^{(l)}_{\mathrm{bu}}(\mathbf{x}^{(l)}, \mathbf{x}^{(l-1)})
+  + \mathbf{F}^{(l)}_{\mathrm{td}}(\mathbf{x}^{(l)}, \mathbf{x}^{(l+1)})
+  - \gamma \mathbf{x}^{(l)}
+\label{eq:dynamics}
+\end{equation}
+where $\gamma > 0$ is a viscous damping coefficient ensuring energy dissipation.
+
+\medskip
+\textbf{Intra-level force (local attractors and repulsors):}
+\begin{equation}
+  \mathbf{F}^{(l)}_{\mathrm{intra}} = -\nabla_{\mathbf{x}} E^{(l)}(\mathbf{x}^{(l)})
+\end{equation}
+
+\textbf{Bottom-up error-correction force:}
+\begin{equation}
+  \mathbf{F}^{(l)}_{\mathrm{bu}} =
+  \alpha_{\mathrm{bu}} \cdot \pi_l\!\left(
+    \mathbf{x}^{(l-1)} - \pi_l^\dagger(\mathbf{x}^{(l)})
+  \right)
+\end{equation}
+This is the \emph{prediction error} signal of Predictive Coding~\cite{rao1999predictive}:
+the difference between the actual lower-level state and the reconstruction predicted by
+the current level.
+
+\textbf{Top-down prediction force:}
+\begin{equation}
+  \mathbf{F}^{(l)}_{\mathrm{td}} =
+  \alpha_{\mathrm{td}} \cdot \left(
+    \pi_l^\dagger\!\left(\mathbf{x}^{(l+1)}\right) - \mathbf{x}^{(l)}
+  \right)
+\end{equation}
+This is the recall force toward the representation predicted by the higher level --- the
+\emph{top-down generation} in the Predictive Coding sense.
+
+\textbf{Boundary conditions}: $\mathbf{F}^{(0)}_{\mathrm{bu}} = 0$,
+$\mathbf{F}^{(L)}_{\mathrm{td}} = 0$.
+
+\subsection{Prediction}
+
+After integration until steady state (criterion: $\|\dot{\mathbf{x}}^{(l)}\| < \epsilon\;\forall l$):
+\begin{equation}
+  \hat{c} = \operatorname*{arg\,max}_c \sum_{l=0}^{L} \beta_l \sum_{m=1}^{M}
+    \exp\!\left(-\frac{\|\mathbf{x}^{(l)}(T) - \boldsymbol{\mu}^{(l)}_{c,m}\|^2}
+                      {2(\sigma^{(l)}_{c,m})^2}\right)
+\label{eq:predict}
+\end{equation}
+where $\beta_l$ are per-level weights (default: $\beta_l = 2^l$, learned or fixed).
+
+\subsection{Critical Design: Dimension-Dependent Kernel Initialisation (Condition I1)}
+\label{sec:i1}
+
+\textbf{Problem}: in high dimension $d$, Euclidean distances concentrate around
+$\mathbb{E}[\|\mathbf{x}-\mathbf{y}\|] \approx \sqrt{d}\cdot\sigma_{\mathrm{data}}$.
+With a fixed $\sigma_{\mathrm{kernel}} \sim 1.0$, Gaussian kernels saturate toward~0 for
+$d \gtrsim 20$, forcing $\nabla E \to 0$ and halting learning.
+
+\textbf{Solution (I1)}: initialise with dimension scaling:
+\begin{equation}
+  \sigma^{(l)}_{\mathrm{init}} = \sqrt{d_l} \cdot \sigma^{(l)}_{\mathrm{data}}
+\end{equation}
+
+\textbf{Empirical impact}:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{rrrr}
+\toprule
+\textbf{Dimension} & \textbf{Pre-fix kernel} & \textbf{Post-fix kernel} & \textbf{Gradient magnitude} \\
+\midrule
+10  & 0.95     & 0.88 & 0.24 \\
+100 & 0.03     & 0.67 & 0.18 \\
+784 & $<0.01$  & 0.52 & 0.15 \\
+\bottomrule
+\end{tabular}
+\caption{Kernel values and gradient magnitude by dimension (typical single run).
+Without~I1, the framework fails to train beyond $\sim$20D in our experiments.}
+\label{tab:kernelfix}
+\end{table}
+
+%% ============================================================
+\section{Learning via Gradient Descent}
+\label{sec:learning}
+%% ============================================================
+
+\subsection{Three-Phase Progressive Training}
+\label{sec:three-phase}
+
+To stabilise learning of coupled dynamics, we use a three-phase schedule:
+
+\textbf{Phase~1 (epochs $1$--$E_1$): Independent learning.}
+Set $\alpha_{\mathrm{bu}} = \alpha_{\mathrm{td}} = 0$. Each level self-organises
+independently. Ensures conditions C1 and C3 (see Section~\ref{sec:theory:convergence}) are
+empirically satisfied before coupling is introduced.
+
+\textbf{Phase~2 (epochs $E_1+1$--$E_1+E_2$): Progressive coupling.}
+\begin{equation}
+  \alpha_{\mathrm{bu}}(t) = \alpha_{\mathrm{bu}}^{\max} \cdot \frac{t - E_1}{E_2},
+  \quad
+  \alpha_{\mathrm{td}}(t) = \alpha_{\mathrm{td}}^{\max} \cdot \frac{t - E_1}{E_2}
+\end{equation}
+
+\textbf{Phase~3 (epochs $E_1+E_2+1$--$E_{\mathrm{total}}$): Full coupling.}
+Fix $\alpha_{\mathrm{bu}} = \alpha_{\mathrm{bu}}^{\max}$,
+$\alpha_{\mathrm{td}} = \alpha_{\mathrm{td}}^{\max}$.
+
+\subsection{Composite Loss Function}
+
+\begin{equation}
+  \mathcal{L} = \mathcal{L}_{\mathrm{CE}} + \mu_1 \mathcal{L}_{\mathrm{sep}} + \mu_2 \mathcal{L}_{\mathrm{dyn}}
+\label{eq:loss}
+\end{equation}
+
+\textbf{Cross-entropy term} (multi-level softmax):
+\begin{equation}
+  \mathcal{L}_{\mathrm{CE}} = -\frac{1}{N} \sum_{i=1}^{N} \log P(y_i \mid \{\mathbf{x}_i^{(l)}(T)\}_l)
+\end{equation}
+
+\textbf{Basin separation term}:
+\begin{equation}
+  \mathcal{L}_{\mathrm{sep}} = \sum_{l} \sum_{c \ne c'} \sum_{m,m'}
+    \exp\!\left(-\frac{\|\boldsymbol{\mu}^{(l)}_{c,m} - \boldsymbol{\mu}^{(l)}_{c',m'}\|^2}
+                       {2\sigma^2_{\min}}\right)
+\end{equation}
+
+\textbf{Dynamical regularisation}:
+\begin{equation}
+  \mathcal{L}_{\mathrm{dyn}} = \frac{1}{T}\int_0^T \sum_l \|\dot{\mathbf{x}}^{(l)}(t)\|^2\, \mathrm{d}t
+\end{equation}
+
+Gradients are computed via RK4 unrolling (for short $T$) or the adjoint
+method~\cite{chen2018neural} via \texttt{torchdiffeq} (for long $T$, memory-efficient).
+
+Attractor positions $\boldsymbol{\mu}^{(l)}_{c,m}$ are initialised by per-class $k$-means
+on the projected training data, providing an initial configuration that empirically
+satisfies the local-dominance assumption (C1) on simple problems.
+
+\subsection{Level-Aware Collapse Recovery}
+\label{sec:p6}
+
+\begin{proposition}[Level-Aware Recovery, informal mechanism]
+\label{prop:p6}
+Define a level $l^*$ as ``collapsed'' when its single-level accuracy
+$|\mathrm{acc}_{l^*} - 1/K| \le \varepsilon$ for at least \texttt{patience}
+consecutive epochs during Phase~3, while global train accuracy is moderate
+(anti-false-positive filter). When detected, the following is triggered:
+\begin{enumerate}
+  \item Re-anchor attractors of level $l^*$ via supervised prototype initialisation in
+        its latent space.
+  \item Temporarily attenuate top-down forces with cooldown ($\alpha_{\mathrm{td}}$ scaled
+        by $\tau<1$ for \texttt{td\_cooldown\_epochs}).
+\end{enumerate}
+\end{proposition}
+
+This is a heuristic mechanism, not a theorem. Empirically on the concentric-rings
+benchmark (Campaign~E8, 5 seeds 42--46), it provides a mean accuracy gain of $+2.2$~pts
+and a worst-seed gain of $+4$~pts. We treat this as engineering scaffolding, not as a
+contribution at the same epistemic level as the four theoretical propositions.
+
+%% ============================================================
+\section{Theoretical Analysis}
+\label{sec:theory}
+%% ============================================================
+
+\subsection*{Preamble: status of the theoretical results}
+
+Before presenting the results, we restate the epistemic position laid out in
+Section~\ref{sec:scope}. Each of the four theoretical observations below
+\emph{specialises} an established framework to HAML's architecture; none constitutes a
+new theoretical result in its own right. We provide them because they clarify how
+HAML's design choices relate to standard tools (LaSalle stability, Hessian analysis,
+topological complexity, hierarchical PC inference), and because the conditions under
+which each holds reveal genuine structural features of the framework. They should not
+be read as foundational contributions.
+
+The four observations are summarised in Table~\ref{tab:theory_caveats} with their
+caveats made explicit. We recommend the reader consult this table while reading the
+formal statements below.
+
+\begin{table}[h]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{p{2.6cm} p{4.8cm} p{5.6cm}}
+\toprule
+\textbf{Result} & \textbf{Substance} & \textbf{Caveat} \\
+\midrule
+Prop.~\ref{prop:convergence} (LaSalle) & Damped gradient flow on bounded-below energy converges to critical points & Standard property of \emph{any} such flow; serves as well-posedness of the ODE stopping criterion. \\
+\addlinespace
+Prop.~\ref{prop:correct_basin} (C1--C3) & Correct-basin convergence under (C1)~initial dominance, (C2)~sufficient coupling, (C3)~separation & Conditional and partly tautological; C2 is set by grid search, not verified analytically. \\
+\addlinespace
+Prop.~\ref{prop:dimindep} (local rate) & Intra-level Hessian at a fixed point is $\kappa^{(l)}\mathbf{I}_{d_l}$, scalar in $d_l$ & In \emph{tension} with Condition~I1: $\sigma^2 \propto d_l$ implies $\kappa \propto 1/d_l$. The result describes the linearised regime only. \\
+\addlinespace
+Prop.~\ref{prop:expressivity} (expressivity) & $O(M^L)$ representable configurations with $O(ML)$ parameters & Worst-case representational; all experiments use $L \in \{2,3\}$, so the $M^L$ factor is not empirically exercised. \\
+\addlinespace
+Prop.~\ref{prop:rademacher} (Rademacher) & Generalisation bound with sub-linear depth dependence & Specialisation of existing neural-ODE bounds~\cite{hanson2024rademacher,marion2023generalization}; not used operationally. \\
+\addlinespace
+Thm.~\ref{thm:map} (MAP correspondence) & Energy equals hierarchical PC free energy under M1--M3 & M3 requires $\lambda = 0$, which \emph{disables} the repulsive terms central to HAML's full model. The operational regime ($\lambda > 0$) is a PC + contrastive hybrid, not exact MAP. \\
+\bottomrule
+\end{tabular}
+\caption{Theoretical results and their caveats. The detailed statements and remarks
+follow in this section.}
+\label{tab:theory_caveats}
+\end{table}
+
+\subsection{Convergence Guarantees}
+\label{sec:theory:convergence}
+
+In the overdamped regime (large $\gamma$, negligible inertia), the system reduces to a pure
+gradient flow:
+\begin{equation}
+  \dot{\mathbf{X}} = -\frac{1}{\gamma}\nabla_{\mathbf{X}} \mathcal{E}(\mathbf{X})
+\end{equation}
+where $\mathbf{X} = (\mathbf{x}^{(0)}, \ldots, \mathbf{x}^{(L)})$ and the total energy is:
+\begin{equation}
+  \mathcal{E}(\mathbf{X}) = \sum_l E^{(l)}(\mathbf{x}^{(l)})
+  + \frac{\alpha_{\mathrm{bu}} + \alpha_{\mathrm{td}}}{2}
+    \sum_l \|\mathbf{x}^{(l)} - \pi_l^\dagger(\mathbf{x}^{(l+1)})\|^2
+\label{eq:lyapunov}
+\end{equation}
+
+\begin{proposition}[Dissipative Convergence]
+\label{prop:convergence}
+$\mathcal{E}$ is bounded below by $-\sum_l \sum_{c,m} w^{(l)}_{c,m}$. Along any trajectory,
+$\dot{\mathcal{E}} = -\frac{1}{\gamma}\|\nabla \mathcal{E}\|^2 \le 0$.
+By LaSalle's invariance principle, every bounded trajectory converges to the largest
+invariant subset of $\{\mathbf{X} : \nabla \mathcal{E}(\mathbf{X}) = 0\}$. The system can
+neither diverge nor oscillate indefinitely.
+\end{proposition}
+
+\begin{remark}[Honest framing of Proposition~\ref{prop:convergence}]
+This proposition is a standard property of damped gradient flows on energies bounded
+below; it is not specific to HAML. We state it because the integration code relies on
+it (the ODE solver terminates on the criterion $\|\dot{\mathbf{x}}^{(l)}\| < \epsilon$,
+which is well-defined precisely because of dissipative convergence). It does
+\emph{not} guarantee convergence to a minimum, let alone to the correct-class minimum.
+Proposition~\ref{prop:correct_basin} below formalises sufficient conditions for the
+latter, and is, we acknowledge, largely tautological in flavour.
+\end{remark}
+
+\begin{proposition}[Sufficient conditions for correct-basin convergence]
+\label{prop:correct_basin}
+Assume:
+\begin{description}[leftmargin=2.5em]
+  \item[C1 -- Local dominance]: at each level, the true-class attractor is the nearest
+        attractor to the trajectory's neighbourhood in Euclidean distance.
+  \item[C2 -- Sufficient coupling]:
+        $\alpha_{\mathrm{bu}} + \alpha_{\mathrm{td}} > \alpha_{\min}$,
+        a problem-dependent threshold determined by spectral analysis of the linearised
+        system around fixed points.
+  \item[C3 -- Basin separation]: $\mathcal{L}_{\mathrm{sep}}$ enforces a positive margin
+        between attractors of different classes.
+\end{description}
+Then any trajectory whose initial condition lies in the joint true-class basin converges
+to the true-class fixed point at each level.
+\end{proposition}
+
+\begin{remark}[Honest framing]
+Proposition~\ref{prop:correct_basin} is essentially: \emph{if} the initial condition lies
+in the correct basin (C1) \emph{and} the basins are separated (C3) \emph{and} the coupling
+is well-tuned (C2), \emph{then} gradient flow converges in that basin. We state it
+explicitly because (a) C1--C3 are precisely the conditions we monitor and enforce via
+$k$-means initialisation, $\mathcal{L}_{\mathrm{sep}}$, and the three-phase schedule, and
+(b) the architectural value of HAML lies in making C1 hold at \emph{higher} levels even
+when it fails at level~0, via top-down guidance (Proposition~\ref{prop:guidance}). The
+result is not deep in itself, but it makes the role of each design choice explicit.
+\end{remark}
+
+\begin{proposition}[Hierarchical Guidance]
+\label{prop:guidance}
+Under coupling, the linearised dynamics around a fixed point have a block-tridiagonal
+Hessian (Eq.~\ref{eq:hessian}) whose minimum eigenvalue is bounded below by
+$\min_l \lambda_{\min}(\mathbf{H}^{(l)}) + (\alpha_{\mathrm{bu}}+\alpha_{\mathrm{td}}) - 2\alpha_{\mathrm{td}}\max_l\|\Pi_l\|_2$.
+For PCA projections with $\|\Pi_l\|_2 \le 1$ and moderate coupling, this lower bound is
+strictly positive, ensuring exponential local convergence at every level once the
+trajectory enters the basin of the higher level.
+\end{proposition}
+
+The Hessian of $\mathcal{E}$ at a fixed point has block-tridiagonal structure:
+\begin{equation}
+  \mathbf{H} = \begin{pmatrix}
+    \mathbf{H}^{(0)} + \mathbf{C}^{(0)} & -\alpha_{\mathrm{td}}\Pi_1^T & 0 & \cdots \\
+    -\alpha_{\mathrm{td}}\Pi_1 & \mathbf{H}^{(1)} + \mathbf{C}^{(1)} & -\alpha_{\mathrm{td}}\Pi_2^T & \cdots \\
+    0 & -\alpha_{\mathrm{td}}\Pi_2 & \ddots & \vdots \\
+    \vdots & \vdots & \vdots & \ddots
+  \end{pmatrix}
+\label{eq:hessian}
+\end{equation}
+with $\mathbf{C}^{(l)} = (\alpha_{\mathrm{bu}} + \alpha_{\mathrm{td}})\mathbf{I}_{d_l}$.
+By Weyl's interlacing inequality~\cite{weyl1912}, the coupling matrices $\mathbf{C}^{(l)}$
+add a positive shift to the eigenvalues of the block-diagonal part; the off-diagonal
+$-\alpha_{\mathrm{td}}\Pi_l$ blocks act as a perturbation bounded by
+$\alpha_{\mathrm{td}}\|\Pi_l\|_2$. In the moderate-coupling regime
+$\alpha_{\mathrm{td}} \|\Pi_l\|_2 < \alpha_{\mathrm{bu}}+\alpha_{\mathrm{td}}$, the
+coupling strictly accelerates local convergence.
+
+\subsection{Local Hessian Structure at a Fixed Point}
+\label{sec:theory:dimindep}
+
+\begin{proposition}[Isotropic Local Hessian at a Fixed Point]
+\label{prop:dimindep}
+At a fixed point $\mathbf{x}^{(l)*} = \boldsymbol{\mu}^{(l)}_{c,m}$, the intra-level
+Hessian block of $E^{(l)}$ in Eq.~\ref{eq:energy} reduces to
+$\mathbf{H}^{(l)}\big|_{\boldsymbol{\mu}} = \kappa^{(l)} \cdot \mathbf{I}_{d_l}$,
+where
+\[
+\kappa^{(l)} = \frac{w^{(l)}_{c,m}}{(\sigma^{(l)}_{c,m})^2}
+  - \lambda \sum_{c' \ne c, m'} \frac{w^{(l)}_{c',m'}}{(\rho^{(l)}_{c',m'})^2}
+    \exp\!\left(-\frac{\|\boldsymbol{\mu}^{(l)}_{c,m} - \boldsymbol{\mu}^{(l)}_{c',m'}\|^2}{2(\rho^{(l)}_{c',m'})^2}\right)
+\]
+is a scalar parameterising the local relaxation rate $T \sim \gamma/\kappa^{(l)}$. The
+Hessian is isotropic across the $d_l$ coordinates of the level.
+\end{proposition}
+
+\begin{remark}[Tension with Condition~I1, and what the result actually says]
+\label{rem:dimindep_tension}
+Earlier drafts of this preprint described this result as showing
+\emph{dimension-independent convergence}. We retract that framing. The Hessian shape is
+isotropic in $d_l$, but its scalar magnitude $\kappa^{(l)} = w/\sigma^2$ depends
+critically on how $\sigma$ is set, and the two natural regimes have opposite issues:
+
+\begin{itemize}
+  \item \emph{Fixed $\sigma$} (no dimension scaling): $\kappa^{(l)}$ is independent
+        of $d_l$, but the kernels saturate toward zero away from the fixed point
+        (Table~\ref{tab:kernelfix}), so the dynamics never enter the linear regime:
+        HAML fails to train at $d_l \gtrsim 20$.
+  \item \emph{Condition~I1 active} ($\sigma^2 \propto d_l$): kernels stay active
+        globally and gradients are well-conditioned, but $\kappa^{(l)} \propto 1/d_l$,
+        so the local relaxation time scales as $T \sim \gamma d_l / w$, growing
+        \emph{linearly} in $d_l$.
+\end{itemize}
+
+The genuine content of Proposition~\ref{prop:dimindep} is therefore: the Hessian's
+isotropy means the linearised dynamics decouple uniformly across coordinates of a
+level, which is a structural property of Gaussian potentials absent from polynomial
+double-wells (SA-nODE). It is \emph{not} a global ``dimension-independence''
+guarantee. Condition~I1 trades a $d_l$ inflation of the local relaxation time against
+the ability to train at all in high dimension; this trade-off is what makes HAML
+operational at 784D, not a free lunch.
+\end{remark}
+
+\begin{corollary}[Depth and local rate]
+\label{cor:depth}
+Under moderate coupling ($\alpha_{\mathrm{td}}\max_l\|\Pi_l\|_2$ bounded uniformly in
+$L$), $\lambda_{\min}(\mathbf{H})$ of the coupled system remains bounded below by a
+quantity independent of~$L$ in the linear regime. Adding levels does not, by itself,
+slow local relaxation; the global convergence time and the dimension scaling through
+I1 are separate questions.
+\end{corollary}
+
+\subsection{Expressivity of the Hierarchy}
+\label{sec:theory:expressivity}
+
+\begin{definition}[Topological complexity]
+The topological complexity $\kappa(\mathcal{P})$ of a binary classification problem
+$\mathcal{P}$ is the minimum number of connected components of the boundary of a Bayes-optimal
+decision region.
+\end{definition}
+
+\begin{proposition}[Hierarchical Expressivity Gain]
+\label{prop:expressivity}
+A flat ($L=1$) attractor model with one Gaussian attractor per simply-connected basin
+requires at least $\kappa(\mathcal{P})$ attractors to represent a problem of topological
+complexity~$\kappa(\mathcal{P})$. A hierarchical model with $L$ levels and $M$ attractors
+per level can represent up to $O(M^L)$ distinct joint configurations $(c,m_0,\ldots,m_L)$
+with only $O(ML)$ parameters per class. On problems whose Bayes-optimal decision boundary
+factorises hierarchically (i.e.\ where a global discrete choice at level~$L$ selects a
+local geometry at level~0), the parameter count gap between flat and hierarchical is
+\emph{exponential in~$L$}.
+\end{proposition}
+
+\begin{remark}[Caveats, including empirical scope]
+\label{rem:expressivity}
+Proposition~\ref{prop:expressivity} is an \emph{existence}-style statement: it bounds
+the worst-case advantage of the hierarchy on a specific structural family of problems
+(hierarchically factorisable boundaries). It does not say that hierarchical models
+always beat flat ones --- on problems without such factorisation, the gain may be zero.
+
+A second caveat concerns the empirical scope of this paper. All our experiments use
+$L \in \{2, 3\}$ (Sections~\ref{sec:emp:rings}--\ref{sec:emp:fashion}), so the
+exponential factor $M^L$ is \emph{never empirically exercised} at scales where
+``exponential'' is qualitatively distinguishable from ``quadratic''. The
+representational gain we report is consistent with the proposition but does not
+demonstrate it. Validating the $O(M^L)$ scaling experimentally would require campaigns
+with $L \ge 4$ and comparison against $L=1$ baselines on problems of controlled
+topological complexity. We list this in Future Work.
+
+A third caveat is on the decision rule. HAML's prediction (Eq.~\ref{eq:predict}) is a
+linear combination of per-class scores summed across levels, not a combinatorial
+function of the $M^L$ joint configurations. The architecture \emph{represents} $O(M^L)$
+configurations in principle; the prediction rule does not exploit them combinatorially.
+A read-out that did exploit them is a possible extension.
+
+The concentric-rings problem (Section~\ref{sec:emp:rings}) is a constructive example
+where the hierarchical factorisation holds: radial structure factorises out at
+level~1, angular refinement remains at level~0.
+\end{remark}
+
+\textbf{Analytical example --- alternating concentric rings}: classes defined by
+$r \in [0,1] \cup [2,3]$ (class~1) and $r \in [1,2] \cup [3,4]$ (class~2). With $L=1$
+in the ambient 2D space, one needs $\Omega(1/\sigma)$ attractors per ring to cover its
+angular extent. With $L=2$, level~1 (radial projection, $d_1=1$) resolves the global
+annular structure with 2 attractors per class; the top-down signal then constrains
+level~0 to refine locally.
+
+\begin{remark}[Open empirical question: is bidirectional coupling necessary?]
+\label{prop:bidi_necessary}
+The original version of this preprint stated this as a conjecture: that there exist
+classification problems representable by a hierarchical bidirectional system that are
+not representable by independent levels with the same attractor count. We now demote it
+to an \emph{open empirical question}, because our own experiments are mixed:
+
+\begin{itemize}
+  \item On the concentric-rings benchmark (Section~\ref{sec:emp:rings}), the coupled
+        variant produces qualitatively different (ring-aligned, non-convex) decision
+        boundaries that the independent variant does not, suggesting the coupling
+        gives access to a representational regime independent levels do not reach.
+  \item On the MNIST subset (Section~\ref{sec:emp:mnist}), the coupled and
+        independent variants achieve \emph{identical} test accuracy ($75.8\%$ vs.\
+        $75.8\%$). This is a direct counter-observation: at least for this problem
+        and this protocol, bidirectional coupling does not contribute representational
+        power that independent levels lack.
+\end{itemize}
+
+The honest reading is that bidirectional coupling appears to matter for problems with
+genuine global-to-local hierarchical structure (rings) but not for problems that can be
+solved by local feature aggregation (MNIST at this scale). Establishing the boundary
+between these regimes empirically, and proving the corresponding separation result
+formally, is left to future work.
+\end{remark}
+
+\begin{proposition}[Rademacher Complexity Upper Bound]
+\label{prop:rademacher}
+For the coupled $L$-level classifier defined by Eq.~\ref{eq:dynamics} with $K$ classes,
+$M$ attractors per level, and $n$ training samples, an upper bound on the empirical
+Rademacher complexity of the induced function class $\mathcal{F}_L$ takes the form:
+\begin{equation}
+  \mathcal{R}_n(\mathcal{F}_L) \le c \sqrt{\frac{KML}{n}}
+    \cdot \prod_{l=1}^{L}(1 + \alpha_l\|\Pi_l\|_F)
+\end{equation}
+for a universal constant $c$ depending on the Lipschitz constants of the integrated flow.
+The dependence on depth is $O(\sqrt{L})$ inside the square root and at most polynomial via
+the product term (which is bounded since $\|\Pi_l\|_F \le \sqrt{d_l}$ and PCA spectral
+norm is bounded).
+\end{proposition}
+
+\begin{remark}[Relation to prior generalisation results for implicit/continuous models]
+The existence of Rademacher complexity bounds for neural ODEs and implicit-depth networks
+is not new: Hanson and Raginsky~\cite{hanson2024rademacher} derive bounds via the
+Chen--Fliess series for neural ODEs, and Marion~\cite{marion2023generalization} provides
+generalisation bounds for neural ODEs and deep residual networks under various path-norm
+assumptions. The specific structure we exploit here is the
+\emph{hierarchical-product form} of the bound: the $O(\sqrt{ML})$ scaling in the number
+of attractors and depth is a direct consequence of the union-bound argument over levels,
+and the product $\prod_l (1 + \alpha_l\|\Pi_l\|_F)$ reflects the Lipschitz contraction
+afforded by PCA projections (cf.\ Remark on contraction in Section~\ref{sec:theory:dimindep}).
+We do \emph{not} claim that this bound is tighter than existing bounds applied to the
+same architecture; we claim that it is the natural specialisation of the general theory to
+HAML's specific structure. Closing the gap with the tightest known bounds for related
+implicit models is open work.
+\end{remark}
+
+\subsection{Predictive Coding Correspondence and Bayesian Grounding}
+\label{sec:theory:bayes}
+
+\subsubsection{The Predictive Coding Generative Model}
+
+Predictive Coding~\cite{rao1999predictive,friston2005theory} posits a hierarchical
+generative model:
+\begin{equation}
+  p(\mathbf{x}^{(0:L)}) = p(\mathbf{x}^{(L)}) \prod_{l=0}^{L-1}
+    p(\mathbf{x}^{(l)} \mid \mathbf{x}^{(l+1)})
+\end{equation}
+In the point-mean-field approximation, the variational free energy reduces to:
+\begin{equation}
+  \mathcal{F}\big|_{\mathrm{pt}} =
+    \sum_l \frac{1}{2}\|\boldsymbol{\varepsilon}^{(l)}\|^2_{\Sigma^{(l)}}
+    - \log p(\mathbf{x}^{(L)})
+\end{equation}
+where $\boldsymbol{\varepsilon}^{(l)} = \mathbf{x}^{(l)} - g^{(l+1)}(\mathbf{x}^{(l+1)})$
+are prediction errors. The inference dynamics are:
+\begin{equation}
+  \dot{\mathbf{x}}^{(l)} = -\frac{\partial \mathcal{F}}{\partial \mathbf{x}^{(l)}}
+    = -\boldsymbol{\varepsilon}^{(l)}
+    + \left(\frac{\partial g^{(l+1)}}{\partial \mathbf{x}^{(l)}}\right)^T
+      \boldsymbol{\varepsilon}^{(l+1)}
+\end{equation}
+
+This is the structural form of HAML's bidirectional coupling.
+
+\subsubsection{Term-by-Term Identification}
+
+With linear generators $g^{(l)}(\mathbf{x}^{(l)}) = \Pi_l^\dagger \mathbf{x}^{(l)}$ and
+isotropic covariances $\Sigma^{(l)} = \frac{1}{\alpha_{\mathrm{bu}}+\alpha_{\mathrm{td}}}\mathbf{I}$:
+\begin{equation}
+  \mathcal{F}\big|_{\mathrm{linear}} =
+    \frac{\alpha_{\mathrm{bu}}+\alpha_{\mathrm{td}}}{2}
+    \sum_l \|\mathbf{x}^{(l)} - \Pi_l^\dagger \mathbf{x}^{(l+1)}\|^2
+    - \log p(\mathbf{x}^{(L)})
+\end{equation}
+The coupling terms are identical to those in $\mathcal{E}$ (Eq.~\ref{eq:lyapunov}).
+Identifying $E^{(l)}$ with $-\log p(\mathbf{x}^{(l)})$:
+\begin{equation}
+  -E^{(l)}(\mathbf{x})\big|_{\lambda=0} =
+    \log \sum_{c,m} w^{(l)}_{c,m}\,
+    \mathcal{N}(\mathbf{x} \mid \boldsymbol{\mu}^{(l)}_{c,m}, (\sigma^{(l)}_{c,m})^2\mathbf{I})
+    + \text{const}
+\end{equation}
+
+\begin{theorem}[MAP Equivalence under M1--M3]
+\label{thm:map}
+Under conditions:
+\begin{description}[leftmargin=2.5em]
+  \item[M1 -- Linear generators]: $g^{(l)}(\mathbf{x}^{(l)}) = \Pi_l^\dagger \mathbf{x}^{(l)}$
+        (satisfied by construction in our architecture).
+  \item[M2 -- Isotropic covariances]: $\Sigma^{(l)} = \frac{1}{\alpha_{\mathrm{bu}}+\alpha_{\mathrm{td}}}\mathbf{I}$
+        (satisfied when $\alpha_{\mathrm{bu}}$ and $\alpha_{\mathrm{td}}$ are level-independent;
+        relaxable to per-level scalings).
+  \item[M3 -- No repulsion]: $\lambda = 0$ in Eq.~\ref{eq:energy}.
+\end{description}
+With these three conditions, $\mathcal{E} \equiv \mathcal{F}|_{\mathrm{pt}}$ as functionals
+of $\mathbf{X}$ (up to an additive constant), and HAML's gradient flow exactly performs
+\emph{MAP inference} in a hierarchical generative model with Gaussian mixture prior at
+each level and Gaussian conditional likelihoods.
+
+With $\lambda > 0$, $\mathcal{E} = \mathcal{F}_{\mathrm{PC}} + \lambda\,\mathcal{F}_{\mathrm{discrim}}$,
+where $\mathcal{F}_{\mathrm{discrim}}$ corresponds to a contrastive discriminative
+prior~\cite{larochelle2008}. This hybrid is a discriminative augmentation of standard PC
+inference.
+\end{theorem}
+
+\begin{remark}[Critical caveat: M3 is \emph{not} satisfied in HAML's operational regime]
+\label{rem:m3_not_satisfied}
+The MAP equivalence requires condition M3 ($\lambda = 0$), i.e.\ \emph{disabling the
+repulsive terms} in Eq.~\ref{eq:energy}. The repulsive terms are essential to HAML's
+basin-separation mechanism (Section~\ref{sec:learning}, $\mathcal{L}_{\mathrm{sep}}$);
+disabling them removes a component that the experimental code uses throughout
+($\lambda > 0$ in all reported runs). The implication is uncomfortable but should be
+stated openly:
+\begin{itemize}
+  \item \textbf{In the regime where Theorem~\ref{thm:map} holds exactly}
+        ($\lambda = 0$), HAML reduces to hierarchical Predictive Coding inference
+        with a Gaussian-mixture prior. This is a known construction; HAML adds
+        nothing foundational here.
+  \item \textbf{In the regime where HAML actually operates} ($\lambda > 0$),
+        Theorem~\ref{thm:map} does not apply exactly. The energy is the sum of a PC
+        free-energy term and a contrastive discriminative
+        prior~\cite{larochelle2008}, and HAML implements a PC + contrastive hybrid,
+        not exact MAP inference.
+\end{itemize}
+We retain the theorem because the decomposition
+$\mathcal{E} = \mathcal{F}_{\mathrm{PC}} + \lambda\,\mathcal{F}_{\mathrm{discrim}}$
+is a useful structural observation about HAML's energy, and because it suggests the
+natural VAE-style extension described in Section~\ref{sec:future}. But we no longer
+claim the MAP correspondence as a foundational contribution of this work: it is a
+specialisation of established results to a reduced version of HAML, and the full HAML
+is a known type of hybrid in the energy-based modelling literature.
+\end{remark}
+
+\begin{remark}[Relation to prior PC--inference and PC--backprop correspondences]
+\label{rem:map_priorwork}
+The correspondence between Predictive Coding and variational inference in hierarchical
+Gaussian generative models is well established: it traces back to Rao and
+Ballard~\cite{rao1999predictive} and was formalised in Friston's free-energy
+framework~\cite{friston2005theory}. The relationship between PC and backpropagation
+has been the subject of substantial recent work: Whittington and
+Bogacz~\cite{whittington2017approximation} showed that PC networks approximate the
+error backpropagation algorithm under specific conditions; Song et
+al.~\cite{song2020can} established exact equivalence to BP on multilayer perceptrons
+under stronger assumptions; Salvatori et al.~\cite{salvatori2021exactbp} extended this
+to arbitrary computation graphs.
+
+Theorem~\ref{thm:map} does \emph{not} claim novelty for the PC--MAP correspondence in
+general. The result is a \emph{specialisation} of these established correspondences to
+HAML's specific generative model: Gaussian-mixture priors at each level (rather than
+Gaussian priors), PCA-projection generators (rather than learned MLPs), and isotropic
+inverse covariances tied to the coupling coefficients. We make conditions M1--M3
+explicit precisely to highlight that the correspondence is conditional on these
+specific structural choices, and that M3 in particular excludes HAML's full operational
+regime (see Remark~\ref{rem:m3_not_satisfied} above).
+\end{remark}
+
+The implicit generative model is:
+\begin{align}
+  p(\mathbf{x}^{(l)}) &=
+    \sum_{c,m} w^{(l)}_{c,m}\, \mathcal{N}(\mathbf{x}^{(l)} \mid \boldsymbol{\mu}^{(l)}_{c,m},
+    (\sigma^{(l)}_{c,m})^2\mathbf{I}) \\
+  p(\mathbf{x}^{(l-1)} \mid \mathbf{x}^{(l)}) &=
+    \mathcal{N}\!\left(\mathbf{x}^{(l-1)} \;\middle|\; \Pi_l^\dagger \mathbf{x}^{(l)},\;
+    \tfrac{1}{\alpha_{\mathrm{bu}}+\alpha_{\mathrm{td}}}\mathbf{I}\right)
+\end{align}
+
+This Bayesian grounding suggests a natural VAE extension, replacing the point-mean-field
+approximation with an ELBO objective (Section~\ref{sec:future}).
+
+%% ============================================================
+\section{Empirical Validation}
+%% ============================================================
+
+We conduct six campaigns across synthetic and real datasets. We report results with
+their statistical status (single-seed vs.\ multi-seed, with means $\pm$ standard
+deviations where available) and resist drawing conclusions that are not supported by the
+sample sizes.
+
+\subsection{Missing Baselines: A Limitation Acknowledged Upfront}
+\label{sec:emp:baselines}
+
+We acknowledge that the empirical study does \emph{not} include strong neural baselines
+(MLP, CNN) trained under identical protocols. On the datasets we use, established
+baselines achieve approximately:
+\begin{itemize}
+  \item \textbf{MNIST (full)}: logistic regression $\sim 92\%$, MLP $\sim 98\%$,
+        CNN $>99\%$.
+  \item \textbf{MNIST subset} (1500 train / 500 test, 5 epochs): a 2-layer MLP typically
+        reaches $90\%$+ in seconds.
+  \item \textbf{Fashion-MNIST (5000 train)}: logistic regression $\sim 84\%$,
+        2-layer MLP $\sim 88\%$, small CNN $>90\%$.
+\end{itemize}
+Our $75.8\%$ on MNIST-subset and $80.1\%$ on Fashion-MNIST are therefore \emph{below
+standard baselines}. We do not present HAML as a more accurate classifier on these
+datasets. The empirical claims of this preprint concern (i)~the framework trains stably
+in high dimension, (ii)~the coupling provides a measurable benefit on structurally
+non-convex problems (rings, intermediate-noise moons), and (iii)~the attractor geometry
+is interpretable and inspectable. Reaching baseline-competitive accuracy is left as
+explicit future work.
+
+\subsection{Campaign A: MNIST Subset --- Gradient Training Gains and Coupling Neutrality}
+\label{sec:emp:mnist}
+
+\textbf{Protocol}: 1500 train / 500 test from MNIST, levels $784 \to 392 \to 196$,
+2 attractors per class, 5 epochs, 3-phase training, seed~42.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lrr}
+\toprule
+\textbf{Condition} & \textbf{Test Accuracy} & \textbf{Phase Progress (train)} \\
+\midrule
+$k$-means init.\ only (no gradient training)       & 45.6\% & --- \\
+End of Phase 1 (independent levels)                & ---    & 64.2\% \\
+End of Phase 2 (progressive coupling)              & ---    & 68.7\% \\
+End of Phase 3 (full coupling)                     & ---    & 71.8\%--77.8\% \\
+Full training, independent variant ($\alpha=0$)    & 75.8\% & --- \\
+Full training, coupled ($\alpha_{\mathrm{bu}}=\alpha_{\mathrm{td}}=1$) & 75.8\% & --- \\
+\bottomrule
+\end{tabular}
+\caption{Campaign A. Gradient training raises accuracy from $45.6\%$ (k-means
+initialisation alone) to $75.8\%$ ($+30.2$~pts). On this short, near-convex protocol,
+\textbf{bidirectional coupling provides no measurable benefit} over the independent
+variant. Single seed; the $+30.2$~pts gain compares to an extremely weak baseline
+($k$-means class assignment with no gradient learning) and should not be interpreted as
+evidence of competitiveness with standard MNIST classifiers (see
+Section~\ref{sec:emp:baselines}).}
+\label{tab:campaign_a}
+\end{table}
+
+\textbf{Interpretation.} This is the most important negative result of the study: on a
+nearly-convex 10-class problem, coupling is neutral. This is consistent with the theory
+(Proposition~\ref{prop:expressivity} requires high topological complexity to predict an
+advantage). We treat this result as informative for scoping the regime in which coupling
+helps, not as evidence against the architecture.
+
+\subsection{Campaign B: Concentric Rings --- Coupling on Non-Convex Geometry}
+\label{sec:emp:rings}
+
+\textbf{Protocol}: alternating concentric rings (topological complexity $\kappa \ge 2$),
+$n_{\mathrm{runs}}=5$, seeds~42--46.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{llr}
+\toprule
+\textbf{Model} & \textbf{Accuracy (mean $\pm$ std)} & \textbf{Qualitative boundary} \\
+\midrule
+Independent levels ($\alpha=0$) & $67.30\% \pm 4.37$ & Convex (fails annular topology) \\
+Coupled (tuned)                 & $71.20\% \pm 6.43$ & Non-convex (aligns rings) \\
+\midrule
+$\Delta$ (mean)                 & $+3.90$~pts        & --- \\
+\bottomrule
+\end{tabular}
+\caption{Campaign B. The mean gain ($+3.90$~pts) is smaller than the pooled standard
+deviation ($\sigma_{\mathrm{coupled}}=6.43$), so a Welch's two-sample $t$-test on $n=5$
+seeds per group does not reject the null hypothesis of equal means at standard
+significance levels. However, the qualitative shift in the learned decision boundary
+(visible in the per-seed plots in the repository) is consistent across all five coupled
+runs.}
+\label{tab:campaign_b}
+\end{table}
+
+\textbf{Honest reading.} The quantitative mean difference is not statistically significant
+at $n=5$ seeds. The qualitative geometric shift (convex decision boundary in the
+independent variant; ring-aligned non-convex boundary in the coupled variant) is robust
+across all five seeds and is the actual evidence in favour of the coupling on this
+benchmark. The high variance in the coupled condition motivates Campaign~E and the
+level-aware recovery mechanism.
+
+\subsection{Campaign C: Noisy Moons --- Noise Robustness Profile (Single Seed)}
+
+\textbf{Protocol}: \texttt{make\_moons} with noise $\sigma \in \{0.10, 0.20, 0.30, 0.40\}$,
+$n=3000$, \textbf{single seed (42)}.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Noise} & \textbf{HAML-Indep.} & \textbf{HAML-Coupled} & \textbf{KNN} & \textbf{SVM RBF} \\
+\midrule
+0.10 & 99.60\% & 99.60\%          & 99.87\% & 99.87\% \\
+0.20 & 89.33\% & \textbf{95.60\%} & 96.53\% & 97.20\% \\
+0.30 & 88.13\% & 90.53\%          & 90.80\% & 91.33\% \\
+0.40 & 84.67\% & 85.07\%          & 83.33\% & 87.33\% \\
+\bottomrule
+\end{tabular}
+\caption{Campaign C. \textbf{Single seed.} The coupling delta
+(HAML-Coupled $-$ HAML-Indep.) is $0.00, 6.27, 2.40, 0.40$~pts at noise
+$0.10, 0.20, 0.30, 0.40$. The maximum at intermediate noise is consistent with the
+prediction that top-down context helps most when local signal is ambiguous but
+exploitable. Multi-seed replication is required before treating the bell-shaped profile
+as established.}
+\label{tab:campaign_c}
+\end{table}
+
+\textbf{Falsifiable prediction.} If the bell-shaped profile is real and not a single-seed
+artefact, multi-seed runs (10+ seeds) should reproduce: (a)~peak coupling gain in the
+intermediate-noise regime, (b)~no significant gain at very low or very high noise. We
+state this as a falsifiable prediction the reader can test against the released code.
+
+\subsection{Campaign D: HAML vs.\ a Controlled SA-nODE Reimplementation}
+
+\textbf{Important caveat.} The SA-nODE comparison uses a \emph{controlled internal
+reimplementation} of the architecture described in~\cite{marino2024}, not the authors'
+official code, which we did not run for this study. The reimplementation reproduces:
+single ambient space, binary attractors $\pm a$, analytic double-well potential, linear
+coupling layer trained jointly with the dynamics, grid search over $(a, \Delta t, \gamma)$.
+A reviewer is justified in regarding this as a weak baseline: a paper comparison should
+ultimately use the official code. We report the result as preliminary.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Noise} & \textbf{HAML Coupled} & \textbf{SA-nODE (reimpl.)} & \textbf{Delta} \\
+\midrule
+0.10 & \textbf{99.60\%} & 86.67\% & $+12.93$~pts \\
+0.20 & \textbf{95.60\%} & 86.40\% & $+9.20$~pts \\
+0.30 & \textbf{90.53\%} & 85.87\% & $+4.67$~pts \\
+0.40 & \textbf{85.07\%} & 83.33\% & $+1.73$~pts \\
+\bottomrule
+\end{tabular}
+\caption{Campaign D. \textbf{Internal SA-nODE reimplementation, single seed.} The
+hierarchical architecture dominates our reimplementation of the flat single-space model
+across noise levels. SA-nODE degrades more slowly in absolute terms ($-3.33$~pts vs.\
+$-14.53$~pts for HAML across the noise range), which we do not currently explain. We
+flag this comparison as preliminary pending evaluation against the official SA-nODE code.}
+\label{tab:campaign_d}
+\end{table}
+
+\subsection{Campaign E: Stabilisation and Inter-Level Collapse}
+
+We iteratively develop the level-aware collapse guard (Section~\ref{sec:p6}) over
+subtests E1--E10. Full per-subtest results are in Appendix~A.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{llrr}
+\toprule
+\textbf{Subtest} & \textbf{Mechanism} & \textbf{Mean Acc.} & \textbf{Min (worst seed)} \\
+\midrule
+E8 baseline (coupled)        & None                       & $68.60\% \pm 7.54$ & 56.67\% \\
+E8 with level-aware guard    & Sec.~\ref{sec:p6}          & $70.80\% \pm 5.54$ & 60.67\% \\
+\midrule
+E10 ($n=3200$, seeds 42--46) & Cause-oriented patch       & $78.75\% \pm 7.63$ & 68.25\% \\
+\bottomrule
+\end{tabular}
+\caption{Campaign E summary. The level-aware guard reduces variance and improves the
+worst-seed performance on the concentric-rings protocol. Scaling sample size from $1200$
+to $3200$ (E10) lifts the mean accuracy by $\approx 8$~pts.}
+\label{tab:campaign_e}
+\end{table}
+
+\textbf{Mechanistic finding}: collapsed levels show \texttt{separation\_ratio} $\approx 0.15$
+(low) despite moderate compactness --- suggesting a learning blockade rather than total
+geometric collapse. Re-anchoring of the affected level's attractors resolves the blockade
+within 1--2 epochs.
+
+\textbf{Cross-dataset validation} (mutex baseline, seeds 42--46, $n=3200$):
+\begin{itemize}
+  \item \texttt{noisy\_moons} (noise 0.30): $89.13\% \pm 1.73$, min $86.25\%$.
+  \item \texttt{make\_classification} (4 classes): $74.08\% \pm 4.31$, min $67.12\%$.
+\end{itemize}
+
+\subsection{Campaign F: Fashion-MNIST --- Stable Training in 784D (Single Seed)}
+\label{sec:emp:fashion}
+
+\textbf{Protocol}: Fashion-MNIST (784D, 10 classes), $n_{\mathrm{train}}=5000$,
+$n_{\mathrm{test}}=1000$, levels $784 \to 392 \to 196$, 10 epochs, phases $(2,3,5)$,
+\textbf{single seed (42)}.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lr}
+\toprule
+\textbf{Metric} & \textbf{Value} \\
+\midrule
+Test accuracy                & \textbf{80.1\%} \\
+Train accuracy (final)       & 82.3\% \\
+End of Phase 1               & 75.36\% \\
+End of Phase 2               & 78.86\% \\
+End of Phase 3               & 82.26\% \\
+Level-aware guard events     & 0 (naturally stable run) \\
+Compute (Colab GPU)          & 6\,979~s ($\approx$2~hrs) \\
+Reproducibility (Kaggle GPU) & 80.1\% / 6\,222~s \\
+\bottomrule
+\end{tabular}
+\caption{Campaign F. \textbf{Single seed.} The headline result is that the
+three-phase training progresses smoothly through all phases in 784D without collapse, not
+that $80.1\%$ is a strong accuracy on Fashion-MNIST (it is not; see
+Section~\ref{sec:emp:baselines}). Identical results across two GPU environments confirm
+deterministic behaviour.}
+\label{tab:campaign_f}
+\end{table}
+
+\textbf{Compute caveat.} At $\approx$2~hrs per 10-epoch run, a multi-seed Fashion-MNIST
+campaign was beyond the compute budget available for this preprint. Multi-seed
+validation is the most important empirical follow-up.
+
+%% ============================================================
+\section{Mechanistic Diagnostics}
+%% ============================================================
+
+We implement diagnostic tools to isolate failure modes:
+
+\subsection{Level-Wise Accuracy Tracking}
+
+At each epoch, per-level accuracy $\mathrm{acc}_l(t)$ is logged. Divergence
+$\Delta_l = \max_l \mathrm{acc}_l - \min_l \mathrm{acc}_l$ serves as a collapse indicator.
+Typical seed-42 signature on the concentric-rings task:
+\begin{itemize}
+  \item Phase 1 (independent): all levels converge to $\sim 60\%$.
+  \item Phase 2 (progressive): divergence emerges ($\Delta_l \approx 0.15$).
+  \item Phase 3 (full coupling): one level plateaus at $\sim 0.5$; guard triggers
+        re-anchoring.
+\end{itemize}
+
+\subsection{Attractor Geometry Metrics}
+
+Per level:
+\begin{itemize}
+  \item \texttt{intra\_spread\_mean}: within-class attractor spread (compactness).
+  \item \texttt{inter\_centroid\_dist\_min}: minimum between-class centroid distance.
+  \item \texttt{separation\_ratio}: geometric margin proxy.
+\end{itemize}
+Collapsed levels show \texttt{separation\_ratio} $\approx 0.15$ (low) despite non-zero
+compactness, indicating a learning blockade rather than total geometric collapse.
+
+\subsection{Force Distribution Analysis}
+
+Histograms of $\|\mathbf{F}^{(l)}\|$ per level reveal:
+\begin{itemize}
+  \item \emph{Saturated kernels} (pre-fix~I1 in high dimensions): $\|\mathbf{F}\| \approx 0$.
+  \item \emph{Balanced learning} (post-fix~I1): approximately Gaussian distribution.
+  \item \emph{Gradient death} in late phases: indicator of convergence or instability.
+\end{itemize}
+
+%% ============================================================
+\section{Discussion}
+%% ============================================================
+
+\subsection{What the Evidence Supports, and What It Does Not}
+
+\textbf{Evidence supports:}
+\begin{enumerate}
+  \item The framework trains stably in dimensions up to 784, given condition~I1.
+  \item On structurally non-convex problems (concentric rings), coupled HAML
+        \emph{qualitatively} recovers ring-aligned decision boundaries that the
+        independent variant fails to produce.
+  \item Bidirectional coupling provides a single-seed accuracy gain at intermediate
+        noise on noisy moons (consistent with theory; awaiting multi-seed confirmation).
+  \item Exact MAP correspondence with hierarchical Predictive Coding under explicit
+        conditions M1--M3 (as a specialisation of the general PC--inference
+        correspondence; see Remark~\ref{rem:map_priorwork}).
+\end{enumerate}
+
+\textbf{Evidence does not support:}
+\begin{enumerate}
+  \item HAML being competitive with standard neural baselines on MNIST or Fashion-MNIST
+        on accuracy alone.
+  \item A statistically significant mean accuracy gain from coupling at $n=5$ seeds on
+        rings.
+  \item Superiority over SA-nODE based on the authors' official implementation.
+  \item Scalability beyond 784D.
+  \item Novelty of any individual building block taken in isolation.
+\end{enumerate}
+
+\subsection{Genuine Limitations}
+\label{sec:discussion:limitations}
+
+\begin{enumerate}
+  \item \textbf{Combinatorial rather than foundational novelty}: each architectural
+        primitive of HAML --- continuous attractors, hierarchical PC, energy
+        minimisation, fixed-point computation, dimension-scaled kernels --- has direct
+        antecedents in the literature reviewed in Section~\ref{sec:related}. The
+        contribution is the specific assembly of these primitives for supervised
+        classification by basin membership, not the invention of any of them. Readers
+        should evaluate HAML as a synthesis with motivated specialisation, not as a
+        new family of models.
+  \item \textbf{Missing strong baselines}: no MLP, CNN, or boosted-tree baseline trained
+        under identical protocols. This is the most important methodological gap.
+  \item \textbf{Single-seed runs on real data}: MNIST-subset and Fashion-MNIST are
+        single-seed for compute reasons.
+  \item \textbf{Statistical underpowering on rings}: $n=5$ seeds is insufficient to claim
+        a mean accuracy advantage from coupling; we rely on qualitative geometric
+        evidence.
+  \item \textbf{Internal SA-nODE reimplementation}: not a substitute for evaluation
+        against the authors' official code.
+  \item \textbf{Computational cost}: $\approx$2~hrs per 10-epoch run on Fashion-MNIST
+        (5000 samples). Adjoint methods and gradient checkpointing should reduce this
+        substantially.
+  \item \textbf{Inter-level instability}: variance remains high between seeds; the
+        level-aware guard helps but does not fully resolve it.
+  \item \textbf{Hyperparameter sensitivity}: $(\alpha_{\mathrm{bu}}, \alpha_{\mathrm{td}}, \mu_1, \mu_2)$
+        require per-dataset tuning. Automated search is an open engineering challenge.
+  \item \textbf{Unexplained asymmetry}: SA-nODE-reimpl.\ degrades more slowly than HAML
+        as noise increases (Campaign~D); we do not currently have a mechanistic
+        explanation.
+  \item \textbf{Open empirical question on bidirectional coupling}:
+        Remark~\ref{prop:bidi_necessary} now records that bidirectional coupling
+        appears beneficial on rings but not on MNIST. Establishing the structural
+        boundary between these regimes is open.
+  \item \textbf{Theoretical specialisation, not foundational novelty}: the theoretical
+        results in Section~\ref{sec:theory} are specialisations of existing frameworks
+        (LaSalle stability for gradient flows; Rademacher complexity for neural ODEs
+        \cite{hanson2024rademacher,marion2023generalization}; PC--inference
+        correspondence \cite{whittington2017approximation,song2020can,salvatori2021exactbp})
+        to HAML's specific architecture, not foundational results in their own right.
+\end{enumerate}
+
+\subsection{Future Work}
+\label{sec:future}
+\label{sec:future}
+
+\begin{enumerate}
+  \item \textbf{Strong baselines}: MLP / CNN / boosted trees under identical protocols on
+        all reported datasets.
+  \item \textbf{Multi-seed Fashion-MNIST}: at least 5 seeds with the adjoint method to
+        amortise compute.
+  \item \textbf{Official SA-nODE comparison}: replication against Marino et al.'s released
+        code.
+  \item \textbf{Adjoint integration}: full neural-ODE adjoint sensitivity to reduce
+        memory and training time.
+  \item \textbf{Generative extension (HAML-VAE)}: replace the point-mean-field
+        approximation with an ELBO objective.
+  \item \textbf{Resolution of Remark~\ref{prop:bidi_necessary}}: structural
+        characterisation of problems where bidirectional coupling actually adds
+        representational power.
+  \item \textbf{Tighter Rademacher constants} and sample complexity bounds.
+  \item \textbf{Scalability beyond 784D}: tested on CIFAR-10 (3072D) and larger.
+\end{enumerate}
+
+%% ============================================================
+\section{Reproducibility and Implementation}
+%% ============================================================
+
+All code is available at:
+\url{https://github.com/ikobootloader/HIERARCHICAL-ATTRACTOR-MACHINE-LEARNING}
+
+\subsection{Key Software}
+
+\begin{itemize}
+  \item \texttt{haml/}: main package (dynamics, model, training, projection, analysis,
+        visualisation).
+  \item \texttt{experiments/}: 6 reproducible campaign scripts (A--F).
+  \item \texttt{diagnose\_forces.py}: high-dimension saturation detector.
+  \item Dependencies: \texttt{numpy, scikit-learn, torch, torchdiffeq, scipy}.
+\end{itemize}
+
+\subsection{Reproducible Commands}
+
+\textbf{Campaign~A} (MNIST ablation):
+\begin{verbatim}
+python experiments/mnist_coupling_ablation.py
+\end{verbatim}
+
+\textbf{Campaign~B} (concentric rings, multi-seed):
+\begin{verbatim}
+python experiments/concentric_coupling_ablation.py --n-runs 5 --save-figure
+\end{verbatim}
+
+\textbf{Campaign~C} (noisy benchmark):
+\begin{verbatim}
+python experiments/noisy_benchmark.py
+\end{verbatim}
+
+\textbf{Campaign~F} (Fashion-MNIST, GPU):
+\begin{verbatim}
+PYTHONIOENCODING=utf-8 python experiments/fashion_mnist_short_probe.py \
+  --device cuda --seed 42 --n-train 5000 --n-test 1000 --n-epochs 10 \
+  --phase1-epochs 2 --phase2-epochs 3
+\end{verbatim}
+
+%% ============================================================
+\section{Conclusion}
+%% ============================================================
+
+We introduced HAML, a supervised classification framework that combines hierarchical
+PCA-decomposed state spaces, gradient-learned continuous Gaussian attractors, and
+bidirectional Predictive-Coding-style coupling. The contributions, in decreasing order
+of robustness, are: (i)~an original architectural assembly of these primitives;
+(ii)~Condition~I1, a dimension-scaled kernel initialisation that is empirically
+necessary for high-dimensional training; (iii)~a practical three-phase progressive
+training schedule and a heuristic collapse-recovery mechanism; and (iv)~a preliminary
+empirical study with explicit single-seed limitations.
+
+The four theoretical observations in Section~\ref{sec:theory} (dissipative convergence,
+isotropic local Hessian, hierarchical expressivity, PC--MAP correspondence) are
+\emph{specialisations} of established results to HAML's specific architecture, with
+caveats stated explicitly in Section~\ref{sec:scope} and Table~\ref{tab:theory_caveats}.
+They are not foundational theoretical contributions. In particular,
+Proposition~\ref{prop:dimindep} stands in tension with Condition~I1 (the trade-off is
+laid out in Remark~\ref{rem:dimindep_tension}), and Theorem~\ref{thm:map} applies
+exactly only when the repulsive component of HAML is disabled
+(Remark~\ref{rem:m3_not_satisfied}).
+
+Empirically, the evidence is preliminary and mixed. The framework trains stably in 784D
+($80.1\%$ Fashion-MNIST, single seed, below standard baselines). Bidirectional coupling
+provides a qualitative geometric advantage on structurally non-convex problems (rings)
+and a single-seed accuracy gain at intermediate noise (moons), but \emph{no measurable
+gain} on near-convex problems (MNIST subset). The latter is a direct empirical
+counter-observation to the thesis that hierarchical coupling is universally beneficial,
+and we report it explicitly rather than hide it. Multi-seed validation and comparison
+against strong neural baselines remain the most important next steps.
+
+We release the framework and all experimental code in the hope that it will be useful
+as a starting point for further investigation of attractor-based classification,
+hierarchical Predictive Coding implementations, and energy-based hybrids. We welcome
+external replication, criticism, and refutation.
+
+\section*{Acknowledgments}
+
+The author thanks the arXiv and open-source scientific communities, and the contributors
+to PyTorch, scikit-learn, SciPy, and \texttt{torchdiffeq}. This project originated after
+reading J.~Gribbin, \textit{Deep Simplicity} (2004).
+
+%% ============================================================
+\begin{thebibliography}{99}
+
+\bibitem{amit2001attractor}
+Amit, Y., \& Mascaro, M. (2001).
+Attractor networks for shape recognition.
+\textit{Neural Computation}, \textbf{13}(6), 1415--1442.
+DOI:10.1162/08997660152002906.
+
+\bibitem{bai2019deep}
+Bai, S., Kolter, J. Z., \& Koltun, V. (2019).
+Deep equilibrium models.
+\textit{Advances in Neural Information Processing Systems (NeurIPS)}, 32.
+arXiv:1909.01377.
+
+\bibitem{bai2020multiscale}
+Bai, S., Koltun, V., \& Kolter, J. Z. (2020).
+Multiscale deep equilibrium models.
+\textit{Advances in Neural Information Processing Systems (NeurIPS)}, 33, 5238--5250.
+arXiv:2006.08656.
+
+\bibitem{chen2018neural}
+Chen, T. Q., Rubanova, Y., Bettencourt, J., \& Duvenaud, D. K. (2018).
+Neural ordinary differential equations.
+\textit{Advances in Neural Information Processing Systems}, 31, 6571--6583.
+
+\bibitem{friston2005theory}
+Friston, K. (2005).
+A theory of cortical responses.
+\textit{Philosophical Transactions of the Royal Society B: Biological Sciences},
+\textbf{360}(1456), 815--836.
+
+\bibitem{friston2017active}
+Friston, K. (2017).
+Active inference: A process theory.
+\textit{Neural Computation}, \textbf{29}(1), 1--49.
+
+\bibitem{han2018deep}
+Han, K., Wen, H., Zhang, Y., Fu, D., Culurciello, E., \& Liu, Z. (2018).
+Deep predictive coding network with local recurrent processing for object recognition.
+\textit{Advances in Neural Information Processing Systems (NeurIPS)}, 31, 9221--9233.
+arXiv:1805.07526.
+
+\bibitem{hanson2024rademacher}
+Hanson, J., \& Raginsky, M. (2024).
+Rademacher complexity of neural ODEs via Chen--Fliess series.
+\textit{Proceedings of the 6th Annual Learning for Dynamics \& Control Conference (L4DC)},
+PMLR 242:758--769.
+arXiv:2401.16655.
+
+\bibitem{krotov2016dense}
+Krotov, D., \& Hopfield, J. J. (2016).
+Dense associative memory for pattern recognition.
+\textit{Advances in Neural Information Processing Systems}, 29.
+arXiv:1606.01164.
+
+\bibitem{krotov2021hierarchical}
+Krotov, D. (2021).
+Hierarchical associative memory.
+\textit{arXiv preprint} arXiv:2107.06446.
+
+\bibitem{larochelle2008}
+Larochelle, H., \& Bengio, Y. (2008).
+Classification using discriminative restricted Boltzmann machines.
+\textit{Proceedings of the 25th International Conference on Machine Learning (ICML)},
+536--543.
+
+\bibitem{marino2024}
+Marino, R., Giambagli, L., Chicchi, L., Buffoni, L., \& Fanelli, D. (2024).
+Stable attractors for neural networks classification via ordinary differential equations
+(SA-nODE).
+\textit{arXiv preprint} arXiv:2311.10387v2.
+
+\bibitem{marion2023generalization}
+Marion, P. (2023).
+Generalization bounds for neural ordinary differential equations and deep residual
+networks.
+\textit{Advances in Neural Information Processing Systems (NeurIPS)}, 36.
+
+\bibitem{rao1999predictive}
+Rao, R. P. N., \& Ballard, D. H. (1999).
+Predictive coding in the visual cortex: A functional interpretation of some
+extra-classical receptive-field effects.
+\textit{Nature Neuroscience}, \textbf{2}(1), 79--87.
+
+\bibitem{ramsauer2021hopfield}
+Ramsauer, H., Sch\"{a}fl, B., Lehner, J., Seidl, P., Widrich, M., Gruber, L.,
+\ldots\ \& Kreil, D. P. (2021).
+Hopfield networks is all you need.
+\textit{International Conference on Learning Representations (ICLR)}.
+
+\bibitem{salvatori2021associative}
+Salvatori, T., Song, Y., Hong, Y., Frieder, S., Sha, L., Xu, Z., Bogacz, R.,
+\& Lukasiewicz, T. (2021).
+Associative memories via predictive coding.
+\textit{Advances in Neural Information Processing Systems (NeurIPS)}, 34.
+arXiv:2109.08063.
+
+\bibitem{salvatori2021exactbp}
+Salvatori, T., Song, Y., Lukasiewicz, T., Bogacz, R., \& Xu, Z. (2021).
+Predictive coding can do exact backpropagation on any neural network.
+\textit{arXiv preprint} arXiv:2103.04689.
+
+\bibitem{sato1996glvq}
+Sato, A., \& Yamada, K. (1996).
+Generalized learning vector quantization.
+\textit{Advances in Neural Information Processing Systems}, 8.
+
+\bibitem{song2020can}
+Song, Y., Lukasiewicz, T., Xu, Z., \& Bogacz, R. (2020).
+Can the brain do backpropagation? --- Exact implementation of backpropagation in
+predictive coding networks.
+\textit{Advances in Neural Information Processing Systems (NeurIPS)}, 33, 22566--22579.
+
+\bibitem{spratling2017hierarchical}
+Spratling, M. W. (2017).
+A hierarchical predictive coding model of object recognition in natural images.
+\textit{Cognitive Computation}, \textbf{9}(2), 151--167.
+DOI:10.1007/s12559-016-9445-1.
+
+\bibitem{weyl1912}
+Weyl, H. (1912).
+Das asymptotische Verteilungsgesetz der Eigenwerte linearer partieller
+Differentialgleichungen.
+\textit{Mathematische Annalen}, \textbf{71}, 441--479.
+
+\bibitem{whittington2017approximation}
+Whittington, J. C. R., \& Bogacz, R. (2017).
+An approximation of the error backpropagation algorithm in a predictive coding network
+with local Hebbian synaptic plasticity.
+\textit{Neural Computation}, \textbf{29}(5), 1229--1262.
+DOI:10.1162/NECO\_a\_00949.
+
+\bibitem{winston2020monotone}
+Winston, E., \& Kolter, J. Z. (2020).
+Monotone operator equilibrium networks.
+\textit{Advances in Neural Information Processing Systems (NeurIPS)}, 33.
+arXiv:2006.08591.
+
+\end{thebibliography}
+
+%% ============================================================
+\appendix
+%% ============================================================
+
+\section{Detailed Campaign Results}
+
+\subsection{Campaign~E --- Subtest Summary}
+
+\begin{table}[h]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{llrr}
+\toprule
+\textbf{Subtest} & \textbf{Key mechanism} & \textbf{Accuracy (test)} & \textbf{$\Delta$ vs.\ indep.} \\
+\midrule
+E1  & Reinforced coupling ($\alpha_{\mathrm{td}}=1.5$, 25 ep.) & 86.38\%            & $+15.63$ pts \\
+E2  & Early-stop + LR decay                                    & 82.88\%            & $+12.00$ pts \\
+E3  & Adaptive $\mu_{\mathrm{sep}}$ + soft landing ep.\ 20     & 69.88\%            & $-1.25$ pts  \\
+E4  & Soft landing on divergence trigger                       & 76.25\%            & $+6.37$ pts  \\
+E5  & Raised trigger + patience 2                              & 76.13\%            & $+5.00$ pts  \\
+E6  & Collapse guard on divergence jump                        & 86.38\%            & $+16.00$ pts \\
+E7  & Seed-wise diagnostics + LR cascade patch                 & $69.33\% \pm 7.10$ & $+9.60$ pts  \\
+E8  & Level-aware guard (phase 3 only)                         & $70.80\% \pm 5.54$ & $+11.07$ pts \\
+E10 & Scale $n=3200$, cause-oriented patch                     & $78.75\% \pm 7.63$ & ---          \\
+\bottomrule
+\end{tabular}
+\caption{Stabilisation iteration summary (Campaign~E). Results on the concentric-rings
+protocol, except E10 where $n=3200$, seeds~42--46. The high single-seed peaks (E1, E6)
+were not retained because their stability across seeds is not established. E8 was
+selected as the operational mechanism on the multi-seed mean--variance trade-off.}
+\label{tab:campaign_e_detail}
+\end{table}
+
+\subsection{Initialisation Condition I1 --- Justification}
+
+Distance concentration in $\mathbb{R}^d$:
+\begin{equation}
+  \mathbb{E}[\|\mathbf{x} - \mathbf{y}\|] \approx \sqrt{d}\cdot\sigma_{\mathrm{data}}
+\end{equation}
+For a Gaussian kernel $\exp(-r^2/2\sigma^2)$ to maintain activations in the range
+$[0.1, 0.9]$ across dimension $d$, $\sigma$ must scale as $\sqrt{d}$. Without~I1, the
+following table shows the resulting kernel saturation (single typical run).
+
+\begin{table}[h]
+\centering
+\begin{tabular}{rrrr}
+\toprule
+\textbf{Dimension} & \textbf{Pre-fix kernel} & \textbf{Post-fix kernel} & \textbf{Gradient} \\
+\midrule
+10  & 0.95    & 0.88 & 0.24 \\
+100 & 0.03    & 0.67 & 0.18 \\
+784 & $<0.01$ & 0.52 & 0.15 \\
+\bottomrule
+\end{tabular}
+\caption{Kernel activations and gradient magnitudes with and without condition~I1.}
+\end{table}
+
+\section{Hyperparameter Sensitivity}
+
+Ablation on the concentric-rings protocol:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lrr}
+\toprule
+\textbf{Parameter} & \textbf{Range tested} & \textbf{Accuracy range} \\
+\midrule
+$\alpha_{\mathrm{bu}}$ & $[0.0, 1.0]$   & $[67.3\%, 73.2\%]$ \\
+$\alpha_{\mathrm{td}}$ & $[0.0, 1.5]$   & $[67.3\%, 75.1\%]$ \\
+$\mu_1$ (separation)   & $[0.1, 1.0]$   & $[70.5\%, 71.9\%]$ \\
+$\mu_2$ (dynamics)     & $[0.001, 0.1]$ & $[71.1\%, 71.3\%]$ \\
+\bottomrule
+\end{tabular}
+\caption{Sensitivity on primary hyperparameters. The model is moderately robust;
+$\alpha_{\mathrm{bu}}$ and $\alpha_{\mathrm{td}}$ require the most attention per dataset.}
+\end{table}
+
+\section{Summary of Theoretical Results}
+
+\begin{table}[h]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{p{2.3cm}lp{4cm}p{4.3cm}}
+\toprule
+\textbf{Result} & \textbf{Section} & \textbf{Substance} & \textbf{Caveat / status} \\
+\midrule
+Prop.~\ref{prop:convergence} (LaSalle) & \ref{sec:theory:convergence} & Damped gradient flow converges to critical points. & Standard for any damped gradient flow on bounded energy. \\
+\addlinespace
+Prop.~\ref{prop:correct_basin} (C1--C3) & \ref{sec:theory:convergence} & Correct-basin convergence under explicit conditions. & C1--C3 are not verified analytically; partly tautological. \\
+\addlinespace
+Prop.~\ref{prop:guidance} (Hierarchical guide) & \ref{sec:theory:convergence} & Coupling shifts Hessian eigenvalues positively. & Standard Weyl perturbation argument. \\
+\addlinespace
+Prop.~\ref{prop:dimindep} (Isotropic Hessian) & \ref{sec:theory:dimindep} & Local Hessian at fixed point is $\kappa^{(l)}\mathbf{I}_{d_l}$. & In \emph{tension} with~I1: $\kappa \propto 1/d_l$ with I1. Not a global dim-independence. \\
+\addlinespace
+Prop.~\ref{prop:expressivity} (Expressivity) & \ref{sec:theory:expressivity} & $O(M^L)$ configurations with $O(ML)$ parameters. & Worst-case; $L=2,3$ in all experiments. \\
+\addlinespace
+Rem.~\ref{prop:bidi_necessary} (Bidi.\ open Q) & \ref{sec:theory:expressivity} & Bidirectional coupling helps on rings, neutral on MNIST. & Empirically open. \\
+\addlinespace
+Prop.~\ref{prop:rademacher} (Rademacher) & \ref{sec:theory:expressivity} & Sub-linear-in-depth complexity bound. & Specialisation of existing neural-ODE bounds; not used operationally. \\
+\addlinespace
+Thm.~\ref{thm:map} (MAP) & \ref{sec:theory:bayes} & $\mathcal{E} = \mathcal{F}_{\mathrm{PC}}$ under M1--M3. & M3 ($\lambda=0$) excludes HAML's operational regime. Specialisation of known correspondences. \\
+\addlinespace
+\midrule
+\multicolumn{4}{l}{\emph{Non-theoretical contributions (the more robust ones):}} \\
+\addlinespace
+Cond.~I1 & \ref{sec:i1} & $\sigma_{\mathrm{init}} \propto \sqrt{d_l}$ initialisation. & Empirically necessary for $d > 20$. \\
+\addlinespace
+Prop.~\ref{prop:p6} (Level-aware recovery) & \ref{sec:p6} & Heuristic to re-anchor collapsed levels. & Engineering, not a theorem. \\
+\bottomrule
+\end{tabular}
+\caption{Summary of theoretical results, with their epistemic status. The genuinely
+robust contributions of the paper (architectural assembly, Condition~I1) are listed at
+the bottom for comparison.}
+\end{table}
+
+\end{document}
