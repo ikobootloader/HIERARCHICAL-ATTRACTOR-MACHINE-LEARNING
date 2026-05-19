@@ -109,6 +109,25 @@ def build_trainer(
     diagnostics_every_epochs,
     diagnostics_subset_size,
 ):
+    phase1_max_steps = model.phase1_max_steps if phase1_max_steps is None else phase1_max_steps
+    phase2_max_steps = model.phase2_max_steps if phase2_max_steps is None else phase2_max_steps
+    phase3_max_steps = model.phase3_max_steps if phase3_max_steps is None else phase3_max_steps
+    phase1_integrator_method = (
+        model.phase1_integrator_method if phase1_integrator_method is None else phase1_integrator_method
+    )
+    phase2_integrator_method = (
+        model.phase2_integrator_method if phase2_integrator_method is None else phase2_integrator_method
+    )
+    phase3_integrator_method = (
+        model.phase3_integrator_method if phase3_integrator_method is None else phase3_integrator_method
+    )
+    diagnostics_every_epochs = (
+        model.diagnostics_every_epochs if diagnostics_every_epochs is None else diagnostics_every_epochs
+    )
+    diagnostics_subset_size = (
+        model.diagnostics_subset_size if diagnostics_subset_size is None else diagnostics_subset_size
+    )
+
     return HAMLTrainer(
         model=model,
         optimizer=ConstrainedOptimizer(model.parameters(), lr=model.lr),
@@ -197,6 +216,7 @@ def run_probe(args):
         n_attractors_per_class=args.n_attractors_per_class,
         alpha_bu=alpha_bu,
         alpha_td=alpha_td,
+        training_preset=args.training_preset,
         use_vectorized_levels=args.use_vectorized_levels,
         repulsion_mode=args.repulsion_mode,
         max_steps=args.max_steps,
@@ -231,6 +251,14 @@ def run_probe(args):
     test_acc = model.score(X_test, y_test)
 
     return {
+        "resolved_device": str(model.device),
+        "effective_phase1_max_steps": model.phase1_max_steps,
+        "effective_phase2_max_steps": model.phase2_max_steps,
+        "effective_phase3_max_steps": model.phase3_max_steps,
+        "effective_phase1_integrator_method": model.phase1_integrator_method,
+        "effective_phase2_integrator_method": model.phase2_integrator_method,
+        "effective_phase3_integrator_method": model.phase3_integrator_method,
+        "effective_diagnostics_every_epochs": model.diagnostics_every_epochs,
         "train_time_sec": float(train_time_sec),
         "test_accuracy": float(test_acc),
         "final_train_accuracy": float(history["accuracy"][-1]) if history["accuracy"] else None,
@@ -296,6 +324,7 @@ def parse_args():
     parser.add_argument("--dataset", choices=["fashion_mnist", "make_moons"], default="make_moons")
     parser.add_argument("--noise", type=float, default=0.30, help="Noise used for make_moons dataset.")
     parser.add_argument("--mode", choices=["coupled_tuned", "independent"], default="coupled_tuned")
+    parser.add_argument("--training-preset", choices=["fast_train_cpu"], default=None)
     parser.add_argument("--use-vectorized-levels", action="store_true")
     parser.add_argument("--repulsion-mode", choices=["global", "inter_class_only"], default="global")
     parser.add_argument("--n-train", type=int, default=1000)
@@ -303,13 +332,13 @@ def parse_args():
     parser.add_argument("--n-epochs", type=int, default=1)
     parser.add_argument("--phase1-epochs", type=int, default=1)
     parser.add_argument("--phase2-epochs", type=int, default=0)
-    parser.add_argument("--phase1-max-steps", type=int, default=50)
-    parser.add_argument("--phase2-max-steps", type=int, default=80)
-    parser.add_argument("--phase3-max-steps", type=int, default=100)
+    parser.add_argument("--phase1-max-steps", type=int, default=None)
+    parser.add_argument("--phase2-max-steps", type=int, default=None)
+    parser.add_argument("--phase3-max-steps", type=int, default=None)
     parser.add_argument("--phase1-integrator-method", choices=["euler", "rk4", "adjoint"], default=None)
     parser.add_argument("--phase2-integrator-method", choices=["euler", "rk4", "adjoint"], default=None)
     parser.add_argument("--phase3-integrator-method", choices=["euler", "rk4", "adjoint"], default=None)
-    parser.add_argument("--diagnostics-every-epochs", type=int, default=1)
+    parser.add_argument("--diagnostics-every-epochs", type=int, default=None)
     parser.add_argument("--diagnostics-subset-size", type=int, default=None)
     parser.add_argument("--n-attractors-per-class", type=int, default=2)
     parser.add_argument("--batch-size", type=int, default=128)
