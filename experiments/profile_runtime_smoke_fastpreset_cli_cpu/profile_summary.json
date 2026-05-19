@@ -1,0 +1,53 @@
+{
+  "config": {
+    "seed": 42,
+    "dataset": "make_moons",
+    "noise": 0.3,
+    "mode": "coupled_tuned",
+    "training_preset": "fast_train_cpu",
+    "use_vectorized_levels": true,
+    "repulsion_mode": "global",
+    "n_train": 300,
+    "n_test": 100,
+    "n_epochs": 1,
+    "phase1_epochs": 1,
+    "phase2_epochs": 0,
+    "phase1_max_steps": 50,
+    "phase2_max_steps": 80,
+    "phase3_max_steps": 100,
+    "phase1_integrator_method": null,
+    "phase2_integrator_method": null,
+    "phase3_integrator_method": null,
+    "diagnostics_every_epochs": 1,
+    "diagnostics_subset_size": null,
+    "n_attractors_per_class": 2,
+    "batch_size": 128,
+    "max_steps": 20,
+    "tol": 0.0001,
+    "convergence_check_every": 5,
+    "disable_convergence_check": false,
+    "mu_dyn": 0.0,
+    "lr": 0.01,
+    "device": "cpu",
+    "top_n": 40,
+    "skip_line_profiler": true,
+    "out_dir": "experiments/profile_runtime_smoke_fastpreset_cli_cpu"
+  },
+  "probe": {
+    "resolved_device": "cpu",
+    "train_time_sec": 1.8317758000002868,
+    "test_accuracy": 0.79,
+    "final_train_accuracy": 0.7433333333333333,
+    "n_history_epochs": 1
+  },
+  "artifacts": {
+    "profile_path": "experiments\\profile_runtime_smoke_fastpreset_cli_cpu\\cprofile_stats.prof",
+    "top_cumtime_path": "experiments\\profile_runtime_smoke_fastpreset_cli_cpu\\cprofile_top_cumtime.txt",
+    "top_tottime_path": "experiments\\profile_runtime_smoke_fastpreset_cli_cpu\\cprofile_top_tottime.txt",
+    "line_profile": {
+      "enabled": false,
+      "skipped": true
+    }
+  },
+  "generated_at_epoch_sec": 1779217266.950694
+}

@@ -1,0 +1,48 @@
+         1651868 function calls (1626999 primitive calls) in 1.976 seconds
+
+   Ordered by: internal time
+   List reduced from 5829 to 40 due to restriction <40>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+     4524    0.175    0.000    0.175    0.000 {built-in method nt._getfinalpathname}
+       60    0.139    0.002    0.154    0.003 C:\Users\fredm\AppData\Roaming\Python\Python312\site-packages\sklearn\cluster\_kmeans.py:623(_kmeans_single_lloyd)
+     1182    0.112    0.000    0.112    0.000 {built-in method marshal.loads}
+   2404/0    0.088    0.000    0.000          {built-in method builtins.exec}
+        3    0.076    0.025    0.076    0.025 {method 'run_backward' of 'torch._C._EngineBase' objects}
+     2060    0.075    0.000    0.079    0.000 <frozen importlib._bootstrap>:426(_get_module_lock)
+     4427    0.053    0.000    0.053    0.000 {built-in method nt.stat}
+     1182    0.049    0.000    0.049    0.000 {built-in method _io.open_code}
+  258/257    0.048    0.000    0.006    0.000 {method 'read' of '_io.TextIOWrapper' objects}
+      720    0.043    0.000    0.071    0.000 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\dynamics\level_vectorized.py:114(_flat_force)
+     1188    0.038    0.000    0.038    0.000 {method 'read' of '_io.BufferedReader' objects}
+     7382    0.035    0.000    0.052    0.000 <frozen importlib._bootstrap_external>:96(_path_join)
+2271/2212    0.030    0.000    0.147    0.000 {built-in method builtins.__build_class__}
+   167759    0.028    0.000    0.029    0.000 {built-in method builtins.getattr}
+      478    0.020    0.000    0.046    0.000 C:\Python312\Lib\site-packages\sympy\core\assumptions.py:614(_prepare_class_assumptions)
+      910    0.019    0.000    0.034    0.000 {built-in method _io.open}
+132485/131865    0.017    0.000    0.020    0.000 {built-in method builtins.isinstance}
+        1    0.014    0.014    0.047    0.047 C:\Python312\Lib\site-packages\threadpoolctl.py:1042(_find_libraries_with_enum_process_module_ex)
+     1182    0.014    0.000    0.127    0.000 <frozen importlib._bootstrap_external>:751(_compile_bytecode)
+     2184    0.013    0.000    0.013    0.000 {built-in method torch.sum}
+     1452    0.012    0.000    0.012    0.000 {method '__exit__' of '_io._IOBase' objects}
+     1745    0.012    0.000    0.012    0.000 {built-in method nt._path_exists}
+    34278    0.012    0.000    0.012    0.000 {built-in method builtins.hasattr}
+      926    0.011    0.000    0.021    0.000 C:\Python312\Lib\importlib\metadata\__init__.py:347(__new__)
+      124    0.010    0.000    0.010    0.000 {built-in method nt.listdir}
+      320    0.010    0.000    0.153    0.000 C:\Python312\Lib\dataclasses.py:921(_process_class)
+     1453    0.010    0.000    0.114    0.000 <frozen importlib._bootstrap_external>:1593(find_spec)
+98928/98575    0.009    0.000    0.010    0.000 {built-in method builtins.len}
+    45462    0.009    0.000    0.009    0.000 {method 'startswith' of 'str' objects}
+   3871/0    0.009    0.000    0.000          <frozen importlib._bootstrap>:1349(_find_and_load)
+     3061    0.009    0.000    0.016    0.000 C:\Python312\Lib\functools.py:35(update_wrapper)
+        1    0.008    0.008    0.008    0.008 {built-in method _winapi.CreateProcess}
+     1182    0.008    0.000    0.270    0.000 <frozen importlib._bootstrap_external>:1062(get_code)
+       60    0.008    0.000    0.042    0.001 C:\Users\fredm\AppData\Roaming\Python\Python312\site-packages\sklearn\cluster\_kmeans.py:174(_kmeans_plusplus)
+     1207    0.008    0.000    0.142    0.000 <frozen importlib._bootstrap>:1240(_find_spec)
+     2262    0.008    0.000    0.197    0.000 <frozen ntpath>:692(realpath)
+     2060    0.008    0.000    0.025    0.000 <frozen importlib._bootstrap>:304(acquire)
+    40000    0.007    0.000    0.007    0.000 {method 'endswith' of 'str' objects}
+       27    0.007    0.000    0.218    0.008 C:\Python312\Lib\inspect.py:982(getmodule)
+     8681    0.007    0.000    0.013    0.000 C:\Python312\Lib\tokenize.py:569(_generate_tokens_from_c_tokenizer)
+
+
