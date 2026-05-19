@@ -1,0 +1,48 @@
+{
+  "config": {
+    "seed": 42,
+    "dataset": "make_moons",
+    "noise": 0.3,
+    "mode": "coupled_tuned",
+    "use_vectorized_levels": true,
+    "repulsion_mode": "global",
+    "n_train": 400,
+    "n_test": 200,
+    "n_epochs": 2,
+    "phase1_epochs": 1,
+    "phase2_epochs": 1,
+    "phase1_max_steps": 50,
+    "phase2_max_steps": 80,
+    "phase3_max_steps": 100,
+    "diagnostics_every_epochs": 2,
+    "diagnostics_subset_size": 200,
+    "n_attractors_per_class": 2,
+    "batch_size": 128,
+    "max_steps": 20,
+    "tol": 0.0001,
+    "convergence_check_every": 5,
+    "disable_convergence_check": false,
+    "mu_dyn": 0.0,
+    "lr": 0.01,
+    "device": "auto",
+    "top_n": 40,
+    "skip_line_profiler": true,
+    "out_dir": "experiments/profile_runtime_smoke_diag_every2"
+  },
+  "probe": {
+    "train_time_sec": 9.121330999999998,
+    "test_accuracy": 0.77,
+    "final_train_accuracy": 0.7975,
+    "n_history_epochs": 2
+  },
+  "artifacts": {
+    "profile_path": "experiments\\profile_runtime_smoke_diag_every2\\cprofile_stats.prof",
+    "top_cumtime_path": "experiments\\profile_runtime_smoke_diag_every2\\cprofile_top_cumtime.txt",
+    "top_tottime_path": "experiments\\profile_runtime_smoke_diag_every2\\cprofile_top_tottime.txt",
+    "line_profile": {
+      "enabled": false,
+      "skipped": true
+    }
+  },
+  "generated_at_epoch_sec": 1779165838.821191
+}

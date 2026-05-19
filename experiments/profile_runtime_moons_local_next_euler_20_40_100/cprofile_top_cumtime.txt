@@ -1,0 +1,48 @@
+         2509571 function calls (2478545 primitive calls) in 10.280 seconds
+
+   Ordered by: cumulative time
+   List reduced from 5830 to 40 due to restriction <40>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+    32/22    0.000    0.000   14.890    0.677 C:\Python312\Lib\site-packages\torch\_ops.py:316(fallthrough)
+        1    0.167    0.167    7.820    7.820 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\training\trainer.py:98(train)
+       80    0.001    0.000    3.863    0.048 C:\Python312\Lib\site-packages\torch\_tensor.py:592(backward)
+       80    0.002    0.000    3.862    0.048 C:\Python312\Lib\site-packages\torch\autograd\__init__.py:243(backward)
+       80    0.001    0.000    3.856    0.048 C:\Python312\Lib\site-packages\torch\autograd\graph.py:815(_engine_run_backward)
+       80    3.855    0.048    3.855    0.048 {method 'run_backward' of 'torch._C._EngineBase' objects}
+       85    0.052    0.001    3.633    0.043 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\dynamics\integrator.py:172(integrate)
+    25/20    0.000    0.000    3.320    0.166 C:\Python312\Lib\site-packages\torch\_ops.py:296(py_impl)
+     2560    0.072    0.000    3.264    0.001 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\dynamics\integrator.py:120(step_euler)
+     2560    0.050    0.000    3.191    0.001 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\dynamics\integrator.py:106(velocity_field)
+     2560    0.055    0.000    3.141    0.001 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\dynamics\integrator.py:80(compute_forces)
+       90    0.003    0.000    2.718    0.030 C:\Python312\Lib\site-packages\torch\library.py:293(impl)
+     7680    0.143    0.000    2.593    0.000 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\dynamics\level_vectorized.py:188(intra_level_force)
+    15360    1.311    0.000    2.324    0.000 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\dynamics\level_vectorized.py:114(_flat_force)
+        3    0.000    0.000    2.213    0.738 C:\Python312\Lib\site-packages\torch\_ops.py:161(py_functionalize_impl)
+        3    0.000    0.000    1.109    0.370 C:\Python312\Lib\site-packages\torch\_ops.py:268(__init__)
+        1    0.000    0.000    1.085    1.085 C:\Python312\Lib\site-packages\torch\_higher_order_ops\triton_kernel_wrap.py:797(__init__)
+       26    0.003    0.000    1.013    0.039 C:\Python312\Lib\site-packages\torch\library.py:135(define)
+       18    0.001    0.000    0.723    0.040 C:\Python312\Lib\site-packages\torch\_prims\__init__.py:356(<genexpr>)
+        7    0.000    0.000    0.681    0.097 C:\Python312\Lib\site-packages\torch\_inductor\inductor_prims.py:18(make_prim)
+        7    0.000    0.000    0.680    0.097 C:\Python312\Lib\site-packages\torch\_prims\__init__.py:267(_make_prim)
+        1    0.000    0.000    0.652    0.652 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\model\haml.py:240(fit)
+        1    0.000    0.000    0.651    0.651 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\model\haml.py:144(_initialize_architecture)
+       10    0.000    0.000    0.645    0.064 C:\Users\fredm\AppData\Roaming\Python\Python312\site-packages\sklearn\base.py:1372(wrapper)
+        3    0.001    0.000    0.644    0.215 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\dynamics\level_vectorized.py:137(initialize_attractors)
+        6    0.002    0.000    0.640    0.107 C:\Users\fredm\AppData\Roaming\Python\Python312\site-packages\sklearn\cluster\_kmeans.py:1426(fit)
+        5    0.000    0.000    0.638    0.128 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\model\haml.py:315(forward)
+5133/4744    0.004    0.000    0.606    0.000 {built-in method builtins.any}
+        8    0.000    0.000    0.576    0.072 C:\Python312\Lib\site-packages\torch\_library\custom_ops.py:145(inner)
+        1    0.000    0.000    0.542    0.542 C:\Python312\Lib\site-packages\torch\distributed\fsdp\__init__.py:1(<module>)
+        1    0.000    0.000    0.533    0.533 C:\Python312\Lib\site-packages\torch\_dynamo\exc.py:1(<module>)
+        1    0.000    0.000    0.530    0.530 C:\Python312\Lib\site-packages\torch\_dynamo\utils.py:1(<module>)
+        1    0.000    0.000    0.517    0.517 C:\Python312\Lib\site-packages\torch\distributed\fsdp\_fully_shard\__init__.py:1(<module>)
+        1    0.000    0.000    0.517    0.517 C:\Python312\Lib\site-packages\torch\distributed\fsdp\_fully_shard\_fully_shard.py:1(<module>)
+    46347    0.497    0.000    0.497    0.000 {built-in method torch.sum}
+        1    0.000    0.000    0.483    0.483 C:\Python312\Lib\site-packages\torch\fx\experimental\symbolic_shapes.py:1(<module>)
+        1    0.000    0.000    0.465    0.465 C:\Python312\Lib\site-packages\torch\distributed\fsdp\_fully_shard\_fsdp_init.py:1(<module>)
+        1    0.000    0.000    0.464    0.464 C:\Python312\Lib\site-packages\torch\distributed\fsdp\_fully_shard\_fsdp_state.py:1(<module>)
+        1    0.000    0.000    0.454    0.454 C:\Python312\Lib\site-packages\torch\utils\_sympy\functions.py:1(<module>)
+       60    0.001    0.000    0.443    0.007 C:\Users\fredm\AppData\Roaming\Python\Python312\site-packages\sklearn\utils\parallel.py:161(wrapper)
+
+

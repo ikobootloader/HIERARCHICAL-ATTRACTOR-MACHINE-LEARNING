@@ -1,0 +1,48 @@
+         23363109 function calls (23282242 primitive calls) in 233.901 seconds
+
+   Ordered by: cumulative time
+   List reduced from 5833 to 40 due to restriction <40>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    4.666    4.666  230.722  230.722 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\training\trainer.py:98(train)
+      400    0.005    0.000  120.211    0.301 C:\Python312\Lib\site-packages\torch\_tensor.py:592(backward)
+      400    0.009    0.000  120.205    0.301 C:\Python312\Lib\site-packages\torch\autograd\__init__.py:243(backward)
+      400    0.004    0.000  120.170    0.300 C:\Python312\Lib\site-packages\torch\autograd\graph.py:815(_engine_run_backward)
+      400  120.165    0.300  120.165    0.300 {method 'run_backward' of 'torch._C._EngineBase' objects}
+      421    0.688    0.002  105.347    0.250 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\dynamics\integrator.py:172(integrate)
+    75160    1.533    0.000   97.593    0.001 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\dynamics\integrator.py:106(velocity_field)
+    75160    1.685    0.000   96.060    0.001 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\dynamics\integrator.py:80(compute_forces)
+    16900    3.142    0.000   90.966    0.005 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\dynamics\integrator.py:139(step_rk4)
+   225480    4.361    0.000   82.073    0.000 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\dynamics\level_vectorized.py:188(intra_level_force)
+   450960   41.978    0.000   73.933    0.000 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\dynamics\level_vectorized.py:114(_flat_force)
+       21    0.000    0.000   17.364    0.827 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\model\haml.py:315(forward)
+    32/22    0.000    0.000   15.601    0.709 C:\Python312\Lib\site-packages\torch\_ops.py:316(fallthrough)
+  1354203   13.621    0.000   13.621    0.000 {built-in method torch.sum}
+   225480    1.221    0.000   11.466    0.000 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\dynamics\coupling.py:142(total_force)
+     7560    0.238    0.000   10.023    0.001 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\dynamics\integrator.py:120(step_euler)
+       11    0.000    0.000    9.156    0.832 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\model\haml.py:333(predict)
+       10    0.001    0.000    8.279    0.828 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\training\metrics.py:13(compute_level_accuracy)
+1357900/1357883    3.119    0.000    8.151    0.000 C:\Python312\Lib\site-packages\torch\_tensor.py:33(wrapped)
+  1662113    7.555    0.000    7.555    0.000 {built-in method torch.exp}
+   150320    1.389    0.000    5.858    0.000 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\dynamics\coupling.py:56(bottom_up_force)
+  1357867    4.832    0.000    4.832    0.000 {method 'pow' of 'torch._C.TensorBase' objects}
+   300640    2.689    0.000    4.148    0.000 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\projection\spaces.py:127(project_up)
+   150320    1.264    0.000    3.858    0.000 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\dynamics\coupling.py:87(top_down_force)
+  1360332    3.516    0.000    3.516    0.000 {method 'unsqueeze' of 'torch._C.TensorBase' objects}
+    25/20    0.000    0.000    3.470    0.174 C:\Python312\Lib\site-packages\torch\_ops.py:296(py_impl)
+    24460    1.202    0.000    3.211    0.000 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\dynamics\integrator.py:68(_compute_convergence_fraction)
+       90    0.003    0.000    3.008    0.033 C:\Python312\Lib\site-packages\torch\library.py:293(impl)
+        3    0.000    0.000    2.313    0.771 C:\Python312\Lib\site-packages\torch\_ops.py:161(py_functionalize_impl)
+   450960    1.924    0.000    1.924    0.000 {built-in method torch.clamp}
+  4230867    1.881    0.000    1.881    0.000 C:\Python312\Lib\site-packages\torch\nn\modules\module.py:1927(__getattr__)
+   451812    0.448    0.000    1.851    0.000 C:\Python312\Lib\site-packages\torch\nn\modules\container.py:632(__getitem__)
+   151164    1.058    0.000    1.626    0.000 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\projection\spaces.py:107(project_down)
+    88056    0.477    0.000    1.372    0.000 C:\Python312\Lib\site-packages\torch\functional.py:1698(norm)
+   450960    1.296    0.000    1.296    0.000 {method 't' of 'torch._C.TensorBase' objects}
+        3    0.000    0.000    1.159    0.386 C:\Python312\Lib\site-packages\torch\_ops.py:268(__init__)
+       26    0.003    0.000    1.144    0.044 C:\Python312\Lib\site-packages\torch\library.py:135(define)
+        1    0.000    0.000    1.137    1.137 C:\Python312\Lib\site-packages\torch\_higher_order_ops\triton_kernel_wrap.py:797(__init__)
+   451816    0.478    0.000    0.956    0.000 C:\Python312\Lib\site-packages\torch\nn\modules\container.py:615(_get_abs_string_index)
+    88056    0.850    0.000    0.850    0.000 {built-in method torch._C._linalg.linalg_vector_norm}
+
+
