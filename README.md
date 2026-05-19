@@ -68,6 +68,14 @@ Notes de configuration :
 - Le planning d'entraînement supporte aussi une méthode d'intégration par phase :
   - `phase1_integrator_method`, `phase2_integrator_method`, `phase3_integrator_method`
   (ex: `euler` en phase 1/2 puis `rk4` en phase 3).
+- Ces paramètres sont disponibles directement dans `HAML(...)` et appliqués par
+  `train_model()` (pas seulement via le script de profilage).
+- Preset pratique :
+  - `training_preset='fast_train_cpu'` applique automatiquement :
+    - `phase1_max_steps=20`, `phase2_max_steps=40`, `phase3_max_steps=100`
+    - `phase1_integrator_method='euler'`, `phase2_integrator_method='euler'`,
+      `phase3_integrator_method='rk4'`
+  - les paramètres explicitement fournis dans `HAML(...)` restent prioritaires.
 - Les diagnostics de fin d'epoch peuvent être espacés pour réduire le coût :
   - `diagnostics_every_epochs` (défaut `1`),
   - `diagnostics_subset_size` (taille de sous-échantillon pour epochs non full).
@@ -152,16 +160,28 @@ Note organisation (2026-05-15) :
 | G (Profilage runtime) | Mesurer où passe le temps avant optimisation | `experiments/profile_training_runtime.py` | Artefacts `cProfile` + rapport ligne-à-ligne optionnel |
 
 Commande de profilage recommandée (locale, sans réseau) :
-- `python experiments/profile_training_runtime.py --dataset make_moons --n-train 1200 --n-test 400 --n-epochs 2 --max-steps 20 --out-dir experiments/profile_runtime_moons`
+- `python experiments/profile_training_runtime.py --dataset make_moons --n-train 1200 --n-test 400 --n-epochs 2 --max-steps 20 --device cpu --out-dir experiments/profile_runtime_moons`
 
 Commande de profilage pipeline cible (si accès OpenML) :
-- `python experiments/profile_training_runtime.py --dataset fashion_mnist --n-train 5000 --n-test 1000 --n-epochs 2 --max-steps 40 --out-dir experiments/profile_runtime_fashion`
+- `python experiments/profile_training_runtime.py --dataset fashion_mnist --n-train 5000 --n-test 1000 --n-epochs 2 --max-steps 40 --device cpu --out-dir experiments/profile_runtime_fashion`
 - variante avec contrôle convergence :
-- `python experiments/profile_training_runtime.py --dataset fashion_mnist --n-train 5000 --n-test 1000 --n-epochs 2 --max-steps 40 --use-vectorized-levels --convergence-check-every 5 --out-dir experiments/profile_runtime_fashion_vectorized_k5`
+- `python experiments/profile_training_runtime.py --dataset fashion_mnist --n-train 5000 --n-test 1000 --n-epochs 2 --max-steps 40 --use-vectorized-levels --convergence-check-every 5 --device cpu --out-dir experiments/profile_runtime_fashion_vectorized_k5`
 - variante scheduler max_steps par phase (conservatrice) :
-- `python experiments/profile_training_runtime.py --dataset fashion_mnist --n-train 5000 --n-test 1000 --n-epochs 2 --phase1-epochs 1 --phase2-epochs 1 --phase1-max-steps 50 --phase2-max-steps 80 --phase3-max-steps 100 --use-vectorized-levels --convergence-check-every 5 --mu-dyn 0.0 --skip-line-profiler --out-dir experiments/profile_runtime_fashion_vectorized_sched_50_80_100`
+- `python experiments/profile_training_runtime.py --dataset fashion_mnist --n-train 5000 --n-test 1000 --n-epochs 2 --phase1-epochs 1 --phase2-epochs 1 --phase1-max-steps 50 --phase2-max-steps 80 --phase3-max-steps 100 --use-vectorized-levels --convergence-check-every 5 --mu-dyn 0.0 --skip-line-profiler --device cpu --out-dir experiments/profile_runtime_fashion_vectorized_sched_50_80_100`
 - variante avec diagnostics espacés (runs plus longs) :
-- `python experiments/profile_training_runtime.py --dataset make_moons --noise 0.3 --n-train 5000 --n-test 1000 --n-epochs 10 --phase1-epochs 3 --phase2-epochs 3 --phase1-max-steps 50 --phase2-max-steps 80 --phase3-max-steps 100 --diagnostics-every-epochs 2 --diagnostics-subset-size 1000 --use-vectorized-levels --convergence-check-every 5 --mu-dyn 0.0 --skip-line-profiler --out-dir experiments/profile_runtime_moons_diag_every2`
+- `python experiments/profile_training_runtime.py --dataset make_moons --noise 0.3 --n-train 5000 --n-test 1000 --n-epochs 10 --phase1-epochs 3 --phase2-epochs 3 --phase1-max-steps 50 --phase2-max-steps 80 --phase3-max-steps 100 --diagnostics-every-epochs 2 --diagnostics-subset-size 1000 --use-vectorized-levels --convergence-check-every 5 --mu-dyn 0.0 --skip-line-profiler --device cpu --out-dir experiments/profile_runtime_moons_diag_every2`
+
+Note reporting :
+- `profile_summary.json` contient désormais `probe.resolved_device` (device réellement utilisé),
+  pour éviter toute ambiguïté quand l'argument CLI est `--device auto`.
+- `profile_summary.json` contient aussi les paramètres runtime effectivement appliqués :
+  - `probe.effective_phase*_max_steps`
+  - `probe.effective_phase*_integrator_method`
+  - `probe.effective_diagnostics_every_epochs`
+  (utile avec `--training-preset` + overrides CLI).
+
+Commande preset (CPU) :
+- `python experiments/profile_training_runtime.py --dataset fashion_mnist --n-train 5000 --n-test 1000 --n-epochs 10 --phase1-epochs 3 --phase2-epochs 3 --training-preset fast_train_cpu --use-vectorized-levels --device cpu --skip-line-profiler --out-dir experiments/profile_runtime_fashion_local_long_fastpreset_cpu`
 
 Résultats A/B locaux (validation perf scheduler `max_steps`) :
 - protocole :
@@ -215,7 +235,7 @@ Itération scheduler agressive `20/40/100` (même protocole local `2` epochs) :
 - lecture :
   - sur ce protocole court, `20/40/100` est le meilleur compromis vitesse/perf observé.
 
-Itération méthode d'intégration par phase (même protocole local `2` epochs, scheduler `20/40/100`) :
+Itération méthode d'intégration par phase (même protocole local `2` epochs, scheduler `20/40/100`, **device=CPU**) :
 - baseline (`RK4` partout) :
   - `train_time_sec=30.24`
   - `test_accuracy=0.855`
@@ -231,7 +251,7 @@ Itération méthode d'intégration par phase (même protocole local `2` epochs, 
 Micro-benchmark vectorisation niveau (CPU/GPU) :
 - `python experiments/level_vectorized_micro_benchmark.py --batch-size 125 --dim 784 --n-classes 10 --n-attractors 2 --device cpu --out-json experiments/diag_level_vectorized_micro_benchmark_cpu.json`
 
-Validation robuste de la variante `Euler` phase 1/2 (run long `10` epochs, `phase1=3`, `phase2=3`) :
+Validation robuste de la variante `Euler` phase 1/2 (run long `10` epochs, `phase1=3`, `phase2=3`, **device=CPU**) :
 - baseline (`RK4` partout, `20/40/100`) :
   - `train_time_sec=292.24`
   - `test_accuracy=0.841`
@@ -245,6 +265,46 @@ Validation robuste de la variante `Euler` phase 1/2 (run long `10` epochs, `phas
   - `final_train_accuracy=0.8454`
 - conclusion :
   - gain net `-61.47s` (`~21.0%`, `~1.27x`) sans perte de performance observée.
+
+Validation sur pipeline cible Fashion-MNIST (run local `2` epochs, `n_train=5000`, `n_test=1000`, scheduler `20/40/100`, **device=CPU**) :
+- baseline (`RK4` partout) :
+  - `train_time_sec=250.93`
+  - `test_accuracy=0.745`
+  - `final_train_accuracy=0.7538`
+- variante (`Euler` phase 1/2, `RK4` phase 3) :
+  - `phase1_integrator_method=euler`
+  - `phase2_integrator_method=euler`
+  - `phase3_integrator_method=rk4`
+  - `train_time_sec=55.14`
+  - `test_accuracy=0.745`
+  - `final_train_accuracy=0.7538`
+- conclusion :
+  - gain net `-195.79s` (`~78.0%`, `~4.55x`) sans régression d'accuracy sur ce protocole.
+
+Validation robuste sur Fashion-MNIST (run local `10` epochs, `n_train=5000`, `n_test=1000`, scheduler `20/40/100`, **device=CPU**) :
+- baseline (`RK4` partout) :
+  - `train_time_sec=2880.86`
+  - `test_accuracy=0.798`
+  - `final_train_accuracy=0.8216`
+- variante (`Euler` phase 1/2, `RK4` phase 3) :
+  - `phase1_integrator_method=euler`
+  - `phase2_integrator_method=euler`
+  - `phase3_integrator_method=rk4`
+  - `train_time_sec=1676.21`
+  - `test_accuracy=0.798`
+  - `final_train_accuracy=0.8216`
+- conclusion :
+  - gain net `-1204.65s` (`~41.8%`, `~1.72x`) sans perte accuracy.
+
+Campagne multi-seeds `fast_train_cpu` (Fashion-MNIST, local CPU, `10` epochs, seeds `42..44`) :
+- seed `42` : `train_time_sec=1562.67`, `test_accuracy=0.798`, `train_accuracy=0.8216`
+- seed `43` : `train_time_sec=1480.52`, `test_accuracy=0.814`, `train_accuracy=0.8284`
+- seed `44` : `train_time_sec=1390.66`, `test_accuracy=0.802`, `train_accuracy=0.8188`
+- agrégé (`3` seeds) :
+  - `train_time_sec mean = 1477.95s` (~24m38s)
+  - `test_accuracy mean = 0.8047` (`std ~ 0.0068`)
+- note :
+  - le preset est bien appliqué (`effective_phase*=20/40/100`, `effective_methods=euler/euler/rk4` dans `profile_summary.json`).
 
 ### Campagne A - MNIST subset (1500/500, 5 epochs)
 

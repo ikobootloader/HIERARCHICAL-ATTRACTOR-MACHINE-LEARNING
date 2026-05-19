@@ -93,14 +93,58 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
   en plus du scheduler `max_steps`.
 - Test ajouté : `tests/test_phase_integrator_method_schedule.py`
   (vérifie le switch effectif `euler -> rk4` entre phases).
-- Résultat mesuré (local, `make_moons`, `2` epochs, scheduler `20/40/100`) :
+- Résultat mesuré (local, `make_moons`, `2` epochs, scheduler `20/40/100`, `device=cpu`) :
   - baseline `RK4` : `train_time_sec=30.24`, `test_acc=0.855`, `train_acc=0.8528`
   - variante `Euler` phase 1/2 : `train_time_sec=7.82`, `test_acc=0.854`, `train_acc=0.8526`
   - gain : `-22.41s` (`~74.1%`, `~3.87x`) avec écart accuracy négligeable.
-- Validation robuste (local, `make_moons`, `10` epochs, `phase1=3`, `phase2=3`, scheduler `20/40/100`) :
+- Validation robuste (local, `make_moons`, `10` epochs, `phase1=3`, `phase2=3`, scheduler `20/40/100`, `device=cpu`) :
   - baseline `RK4` : `train_time_sec=292.24`, `test_acc=0.841`, `train_acc=0.8454`
   - variante `Euler` phase 1/2 + `RK4` phase 3 : `train_time_sec=230.77`, `test_acc=0.841`, `train_acc=0.8454`
   - gain : `-61.47s` (`~21.0%`, `~1.27x`) sans perte observée.
+- Validation sur pipeline cible Fashion-MNIST (local, `2` epochs, `n_train=5000`, `n_test=1000`, scheduler `20/40/100`, `device=cpu`) :
+  - baseline `RK4` : `train_time_sec=250.93`, `test_acc=0.745`, `train_acc=0.7538`
+  - variante `Euler` phase 1/2 + `RK4` phase 3 : `train_time_sec=55.14`, `test_acc=0.745`, `train_acc=0.7538`
+  - gain : `-195.79s` (`~78.0%`, `~4.55x`) sans perte observée sur ce protocole.
+- Validation robuste sur pipeline cible Fashion-MNIST (local, `10` epochs, `n_train=5000`, `n_test=1000`, scheduler `20/40/100`, `device=cpu`) :
+  - baseline `RK4` : `train_time_sec=2880.86`, `test_acc=0.798`, `train_acc=0.8216`
+  - variante `Euler` phase 1/2 + `RK4` phase 3 : `train_time_sec=1676.21`, `test_acc=0.798`, `train_acc=0.8216`
+  - gain : `-1204.65s` (`~41.8%`, `~1.72x`) sans perte observée.
+- Campagne multi-seeds `fast_train_cpu` (Fashion-MNIST, local CPU, `10` epochs, seeds `42..44`) :
+  - seed `42` : `train_time_sec=1562.67`, `test_acc=0.798`, `train_acc=0.8216`
+  - seed `43` : `train_time_sec=1480.52`, `test_acc=0.814`, `train_acc=0.8284`
+  - seed `44` : `train_time_sec=1390.66`, `test_acc=0.802`, `train_acc=0.8188`
+  - agrégé : `train_time mean=1477.95s`, `test_acc mean=0.8047`, `std~0.0068`.
+- Profilage runtime: ajout du champ `probe.resolved_device` dans
+  `experiments/profile_training_runtime.py` pour tracer le device réellement
+  utilisé (`cpu`/`cuda`) indépendamment du paramètre CLI (`--device auto`).
+- README harmonisé :
+  - commandes de profilage explicitées avec `--device cpu` sur les exemples
+    locaux reportés,
+  - note d'interprétation ajoutée sur `probe.resolved_device`.
+- Industrialisation du scheduler runtime côté API modèle (`haml/model/haml.py`) :
+  - `HAML` expose désormais directement :
+    - `phase1_max_steps`, `phase2_max_steps`, `phase3_max_steps`
+    - `phase1_integrator_method`, `phase2_integrator_method`, `phase3_integrator_method`
+    - `diagnostics_every_epochs`, `diagnostics_subset_size`
+  - ces paramètres sont transmis à `PhaseConfig` dans `train_model()`.
+- Ajout d'un preset runtime :
+  - `training_preset='fast_train_cpu'` dans `HAML(...)`
+  - applique par défaut `20/40/100` + `euler/euler/rk4`
+  - respecte les overrides explicites fournis au constructeur.
+- `experiments/profile_training_runtime.py` expose maintenant :
+  - `--training-preset fast_train_cpu`
+  - résolution propre des paramètres phase/méthode/diagnostics :
+    - les flags CLI explicites restent prioritaires,
+    - sinon fallback sur les valeurs du modèle/preset.
+- Le résumé de profilage (`profile_summary.json`) exporte désormais :
+  - `probe.effective_phase*_max_steps`
+  - `probe.effective_phase*_integrator_method`
+  - `probe.effective_diagnostics_every_epochs`
+  pour tracer la configuration réellement utilisée.
+- Test de non-régression ajouté :
+  - `tests/test_refactor_invariants.py::test_haml_exposes_phase_runtime_knobs_in_get_params`.
+  - `tests/test_refactor_invariants.py::test_haml_fast_train_cpu_preset_applies_defaults`.
+  - `tests/test_refactor_invariants.py::test_haml_fast_train_cpu_preset_respects_explicit_overrides`.
 
 ### Modifié - 2026-05-17
 - Campagne F (Fashion-MNIST) complétée avec comparaison `coupled_tuned` vs `independent` sur seeds `42..46` :
