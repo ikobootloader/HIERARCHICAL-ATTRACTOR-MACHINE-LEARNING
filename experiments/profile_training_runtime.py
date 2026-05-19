@@ -95,7 +95,20 @@ def load_moons_subset(n_train, n_test, seed, noise):
     return X_train, X_test, y_train, y_test
 
 
-def build_trainer(model, n_epochs, phase1_epochs, phase2_epochs, phase1_max_steps, phase2_max_steps, phase3_max_steps):
+def build_trainer(
+    model,
+    n_epochs,
+    phase1_epochs,
+    phase2_epochs,
+    phase1_max_steps,
+    phase2_max_steps,
+    phase3_max_steps,
+    phase1_integrator_method,
+    phase2_integrator_method,
+    phase3_integrator_method,
+    diagnostics_every_epochs,
+    diagnostics_subset_size,
+):
     return HAMLTrainer(
         model=model,
         optimizer=ConstrainedOptimizer(model.parameters(), lr=model.lr),
@@ -109,6 +122,11 @@ def build_trainer(model, n_epochs, phase1_epochs, phase2_epochs, phase1_max_step
             phase1_max_steps=phase1_max_steps,
             phase2_max_steps=phase2_max_steps,
             phase3_max_steps=phase3_max_steps,
+            phase1_integrator_method=phase1_integrator_method,
+            phase2_integrator_method=phase2_integrator_method,
+            phase3_integrator_method=phase3_integrator_method,
+            diagnostics_every_epochs=diagnostics_every_epochs,
+            diagnostics_subset_size=diagnostics_subset_size,
         ),
         stability_config=StabilityConfig(
             level_divergence_threshold=0.15,
@@ -200,6 +218,11 @@ def run_probe(args):
         args.phase1_max_steps,
         args.phase2_max_steps,
         args.phase3_max_steps,
+        args.phase1_integrator_method,
+        args.phase2_integrator_method,
+        args.phase3_integrator_method,
+        args.diagnostics_every_epochs,
+        args.diagnostics_subset_size,
     )
 
     train_start = time.perf_counter()
@@ -283,6 +306,11 @@ def parse_args():
     parser.add_argument("--phase1-max-steps", type=int, default=50)
     parser.add_argument("--phase2-max-steps", type=int, default=80)
     parser.add_argument("--phase3-max-steps", type=int, default=100)
+    parser.add_argument("--phase1-integrator-method", choices=["euler", "rk4", "adjoint"], default=None)
+    parser.add_argument("--phase2-integrator-method", choices=["euler", "rk4", "adjoint"], default=None)
+    parser.add_argument("--phase3-integrator-method", choices=["euler", "rk4", "adjoint"], default=None)
+    parser.add_argument("--diagnostics-every-epochs", type=int, default=1)
+    parser.add_argument("--diagnostics-subset-size", type=int, default=None)
     parser.add_argument("--n-attractors-per-class", type=int, default=2)
     parser.add_argument("--batch-size", type=int, default=128)
     parser.add_argument("--max-steps", type=int, default=20)
