@@ -73,6 +73,15 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
         n_epochs=50,
         batch_size=32,
         train_on_fit=False,
+        training_preset=None,
+        phase1_max_steps=None,
+        phase2_max_steps=None,
+        phase3_max_steps=None,
+        phase1_integrator_method=None,
+        phase2_integrator_method=None,
+        phase3_integrator_method=None,
+        diagnostics_every_epochs=1,
+        diagnostics_subset_size=None,
         level_score_weighting='exponential',
         use_vectorized_levels=False,
         repulsion_mode='global',
@@ -125,9 +134,19 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
         self.n_epochs = n_epochs
         self.batch_size = batch_size
         self.train_on_fit = train_on_fit
+        self.training_preset = training_preset
+        self.phase1_max_steps = phase1_max_steps
+        self.phase2_max_steps = phase2_max_steps
+        self.phase3_max_steps = phase3_max_steps
+        self.phase1_integrator_method = phase1_integrator_method
+        self.phase2_integrator_method = phase2_integrator_method
+        self.phase3_integrator_method = phase3_integrator_method
+        self.diagnostics_every_epochs = diagnostics_every_epochs
+        self.diagnostics_subset_size = diagnostics_subset_size
         self.level_score_weighting = level_score_weighting
         self.use_vectorized_levels = use_vectorized_levels
         self.repulsion_mode = repulsion_mode
+        self._apply_training_preset()
 
         # Modules (initialisés dans fit)
         self.scaler = StandardScaler()
@@ -140,6 +159,32 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
         self.n_classes_ = None
         self.classes_ = None
         self.is_fitted_ = False
+
+    def _apply_training_preset(self):
+        """Apply optional runtime preset while preserving explicit user overrides."""
+        if self.training_preset is None:
+            return
+        preset = str(self.training_preset).strip().lower()
+        if preset == "fast_train_cpu":
+            if self.phase1_max_steps is None:
+                self.phase1_max_steps = 20
+            if self.phase2_max_steps is None:
+                self.phase2_max_steps = 40
+            if self.phase3_max_steps is None:
+                self.phase3_max_steps = 100
+            if self.phase1_integrator_method is None:
+                self.phase1_integrator_method = "euler"
+            if self.phase2_integrator_method is None:
+                self.phase2_integrator_method = "euler"
+            if self.phase3_integrator_method is None:
+                self.phase3_integrator_method = "rk4"
+            if self.diagnostics_every_epochs == 1:
+                self.diagnostics_every_epochs = 1
+            return
+        raise ValueError(
+            f"Unknown training_preset='{self.training_preset}'. "
+            "Supported values: None, 'fast_train_cpu'."
+        )
 
     def _initialize_architecture(self, X, y):
         """
@@ -302,6 +347,14 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
                 phase1_epochs=max(1, self.n_epochs // 3),
                 phase2_epochs=max(1, self.n_epochs // 3),
                 td_warmup_power=1.0,
+                phase1_max_steps=self.phase1_max_steps,
+                phase2_max_steps=self.phase2_max_steps,
+                phase3_max_steps=self.phase3_max_steps,
+                phase1_integrator_method=self.phase1_integrator_method,
+                phase2_integrator_method=self.phase2_integrator_method,
+                phase3_integrator_method=self.phase3_integrator_method,
+                diagnostics_every_epochs=self.diagnostics_every_epochs,
+                diagnostics_subset_size=self.diagnostics_subset_size,
             ),
             device=self.device,
             verbose=True
@@ -474,6 +527,15 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
             'mu_sep': self.mu_sep,
             'mu_dyn': self.mu_dyn,
             'convergence_check_every': self.convergence_check_every,
+            'training_preset': self.training_preset,
+            'phase1_max_steps': self.phase1_max_steps,
+            'phase2_max_steps': self.phase2_max_steps,
+            'phase3_max_steps': self.phase3_max_steps,
+            'phase1_integrator_method': self.phase1_integrator_method,
+            'phase2_integrator_method': self.phase2_integrator_method,
+            'phase3_integrator_method': self.phase3_integrator_method,
+            'diagnostics_every_epochs': self.diagnostics_every_epochs,
+            'diagnostics_subset_size': self.diagnostics_subset_size,
             'level_score_weighting': self.level_score_weighting,
             'use_vectorized_levels': self.use_vectorized_levels,
             'repulsion_mode': self.repulsion_mode,
