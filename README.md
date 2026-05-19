@@ -60,9 +60,17 @@ Notes de configuration :
   dans l'intégrateur ODE (défaut `5`).
 - `tol=None` permet de désactiver complètement l'arrêt anticipé de convergence
   (intégration systématique jusqu'à `max_steps`).
+- `mu_dyn=0.0` (profilage) évite de stocker inutilement la trajectoire ODE
+  complète pendant l'entraînement.
 - Le planning d'entraînement supporte un budget de pas par phase :
   - `phase1_max_steps`, `phase2_max_steps`, `phase3_max_steps`
   (utile pour réduire la profondeur de graphe en début d'entraînement).
+- Le planning d'entraînement supporte aussi une méthode d'intégration par phase :
+  - `phase1_integrator_method`, `phase2_integrator_method`, `phase3_integrator_method`
+  (ex: `euler` en phase 1/2 puis `rk4` en phase 3).
+- Les diagnostics de fin d'epoch peuvent être espacés pour réduire le coût :
+  - `diagnostics_every_epochs` (défaut `1`),
+  - `diagnostics_subset_size` (taille de sous-échantillon pour epochs non full).
 
 ## Architecture
 
@@ -151,10 +159,92 @@ Commande de profilage pipeline cible (si accès OpenML) :
 - variante avec contrôle convergence :
 - `python experiments/profile_training_runtime.py --dataset fashion_mnist --n-train 5000 --n-test 1000 --n-epochs 2 --max-steps 40 --use-vectorized-levels --convergence-check-every 5 --out-dir experiments/profile_runtime_fashion_vectorized_k5`
 - variante scheduler max_steps par phase (conservatrice) :
-- `python experiments/profile_training_runtime.py --dataset fashion_mnist --n-train 5000 --n-test 1000 --n-epochs 2 --phase1-epochs 1 --phase2-epochs 1 --phase1-max-steps 50 --phase2-max-steps 80 --phase3-max-steps 100 --use-vectorized-levels --convergence-check-every 5 --out-dir experiments/profile_runtime_fashion_vectorized_sched_50_80_100`
+- `python experiments/profile_training_runtime.py --dataset fashion_mnist --n-train 5000 --n-test 1000 --n-epochs 2 --phase1-epochs 1 --phase2-epochs 1 --phase1-max-steps 50 --phase2-max-steps 80 --phase3-max-steps 100 --use-vectorized-levels --convergence-check-every 5 --mu-dyn 0.0 --skip-line-profiler --out-dir experiments/profile_runtime_fashion_vectorized_sched_50_80_100`
+- variante avec diagnostics espacés (runs plus longs) :
+- `python experiments/profile_training_runtime.py --dataset make_moons --noise 0.3 --n-train 5000 --n-test 1000 --n-epochs 10 --phase1-epochs 3 --phase2-epochs 3 --phase1-max-steps 50 --phase2-max-steps 80 --phase3-max-steps 100 --diagnostics-every-epochs 2 --diagnostics-subset-size 1000 --use-vectorized-levels --convergence-check-every 5 --mu-dyn 0.0 --skip-line-profiler --out-dir experiments/profile_runtime_moons_diag_every2`
+
+Résultats A/B locaux (validation perf scheduler `max_steps`) :
+- protocole :
+  - dataset `make_moons` (`noise=0.3`), `n_train=5000`, `n_test=1000`
+  - `2` epochs, `phase1=1`, `phase2=1`, `use_vectorized_levels=True`
+  - `convergence_check_every=5`, `mu_dyn=0.0`, `skip_line_profiler=True`
+- run A (`100/100/100`) :
+  - `train_time_sec=86.45`
+  - `test_accuracy=0.846`
+  - `final_train_accuracy=0.845`
+  - artefacts : `experiments/profile_runtime_moons_local_ab_nosched_100_100_100/`
+- run B (`50/80/100`) :
+  - `train_time_sec=51.16`
+  - `test_accuracy=0.855`
+  - `final_train_accuracy=0.8496`
+  - artefacts : `experiments/profile_runtime_moons_local_ab_sched_50_80_100/`
+- conclusion :
+  - gain temps : `-35.29s` (`~40.8%`, `~1.69x`) pour `50/80/100`
+  - accuracy non dégradée (légère hausse observée).
+
+Contrôle diagnostics espacés (même protocole court `2` epochs) :
+- baseline `diagnostics_every_epochs=1` (`50/80/100`) :
+  - `train_time_sec=51.16`, `test_accuracy=0.855`
+- variante `diagnostics_every_epochs=2`, `diagnostics_subset_size=1000` :
+  - `train_time_sec=58.63`, `test_accuracy=0.855`
+- lecture :
+  - sur ce protocole court, l'espacement n'est pas rentable (`+7.47s`, `+14.6%`).
+  - ce levier reste à revalider sur des runs plus longs (où les diagnostics
+    full-train répétés pèsent davantage).
+
+Itération scheduler `max_steps` (même protocole local `2` epochs) :
+- baseline scheduler `50/80/100` :
+  - `train_time_sec=51.16`
+  - `test_accuracy=0.855`
+  - `final_train_accuracy=0.8496`
+- variante scheduler `30/60/100` :
+  - `train_time_sec=41.19`
+  - `test_accuracy=0.855`
+  - `final_train_accuracy=0.8506`
+- conclusion :
+  - gain additionnel `-9.97s` (`~19.5%`, `~1.24x`) vs `50/80/100`
+  - accuracy stable sur ce protocole.
+
+Itération scheduler agressive `20/40/100` (même protocole local `2` epochs) :
+- `train_time_sec=25.26`
+- `test_accuracy=0.855`
+- `final_train_accuracy=0.8528`
+- comparaison :
+  - vs `30/60/100` : `-15.93s` (`~38.7%`, `~1.63x`)
+  - vs `50/80/100` : `-25.90s` (`~50.6%`, `~2.03x`)
+- lecture :
+  - sur ce protocole court, `20/40/100` est le meilleur compromis vitesse/perf observé.
+
+Itération méthode d'intégration par phase (même protocole local `2` epochs, scheduler `20/40/100`) :
+- baseline (`RK4` partout) :
+  - `train_time_sec=30.24`
+  - `test_accuracy=0.855`
+  - `final_train_accuracy=0.8528`
+- variante (`Euler` en phase 1/2) :
+  - `phase1_integrator_method=euler`, `phase2_integrator_method=euler`
+  - `train_time_sec=7.82`
+  - `test_accuracy=0.854`
+  - `final_train_accuracy=0.8526`
+- conclusion :
+  - gain net `-22.41s` (`~74.1%`, `~3.87x`) avec écart accuracy négligeable (`-0.1 pt`).
 
 Micro-benchmark vectorisation niveau (CPU/GPU) :
 - `python experiments/level_vectorized_micro_benchmark.py --batch-size 125 --dim 784 --n-classes 10 --n-attractors 2 --device cpu --out-json experiments/diag_level_vectorized_micro_benchmark_cpu.json`
+
+Validation robuste de la variante `Euler` phase 1/2 (run long `10` epochs, `phase1=3`, `phase2=3`) :
+- baseline (`RK4` partout, `20/40/100`) :
+  - `train_time_sec=292.24`
+  - `test_accuracy=0.841`
+  - `final_train_accuracy=0.8454`
+- variante (`Euler` phase 1/2, `RK4` phase 3) :
+  - `phase1_integrator_method=euler`
+  - `phase2_integrator_method=euler`
+  - `phase3_integrator_method=rk4`
+  - `train_time_sec=230.77`
+  - `test_accuracy=0.841`
+  - `final_train_accuracy=0.8454`
+- conclusion :
+  - gain net `-61.47s` (`~21.0%`, `~1.27x`) sans perte de performance observée.
 
 ### Campagne A - MNIST subset (1500/500, 5 epochs)
 

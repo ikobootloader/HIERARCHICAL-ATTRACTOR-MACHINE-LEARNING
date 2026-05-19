@@ -42,6 +42,65 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
   - `--phase1-max-steps` (défaut `50`),
   - `--phase2-max-steps` (défaut `80`),
   - `--phase3-max-steps` (défaut `100`).
+- Correctif mémoire entraînement :
+  - `HAMLTrainer` ne demande la trajectoire ODE (`return_trajectory=True`)
+    que si `mu_dyn > 0`.
+- Profilage runtime :
+  - ajout de `--mu-dyn` (défaut `0.0`) dans
+    `experiments/profile_training_runtime.py` pour éviter un surcoût mémoire
+    inutile sur les runs de benchmark.
+- Comparatif A/B local consigné (même machine, mêmes seeds, `make_moons`, `n_train=5000`, `n_test=1000`, `2 epochs`, vectorisé, `mu_dyn=0.0`) :
+  - `100/100/100` : `train_time_sec=86.45`, `test_acc=0.846`, `train_acc=0.845`
+  - `50/80/100` : `train_time_sec=51.16`, `test_acc=0.855`, `train_acc=0.8496`
+  - gain net scheduler : `-35.29s` (`~40.8%`, `~1.69x`) sans régression d'accuracy.
+- Optimisation diagnostics ajoutée (étape suivante du plan) :
+  - `PhaseConfig.diagnostics_every_epochs` (défaut `1`, comportement historique),
+  - `PhaseConfig.diagnostics_subset_size` (optionnel, sous-échantillon pour epochs intermédiaires),
+  - `HAMLTrainer` conserve la dernière métrique full-train pour la logique stabilité
+    quand l'epoch courant n'est pas un epoch de diagnostic complet.
+- `experiments/profile_training_runtime.py` expose désormais :
+  - `--diagnostics-every-epochs`,
+  - `--diagnostics-subset-size`.
+- Résultat mesuré (A/B local, protocole court `2` epochs, scheduler `50/80/100`) :
+  - baseline (`diagnostics_every_epochs=1`) : `51.16s`
+  - variante (`diagnostics_every_epochs=2`, subset `1000`) : `58.63s`
+  - accuracy inchangée (`test=0.855`, train finale `0.8496`)
+  - conclusion : sur protocole court, l'espacement des diagnostics n'apporte
+    pas de gain net (surcoût mesuré `+7.47s`, `+14.6%`).
+- Nouvelle itération scheduler `max_steps` (A/B local, même protocole `2` epochs) :
+  - `50/80/100` : `train_time_sec=51.16`, `test_acc=0.855`, `train_acc=0.8496`
+  - `30/60/100` : `train_time_sec=41.19`, `test_acc=0.855`, `train_acc=0.8506`
+  - gain net : `-9.97s` (`~19.5%`, `~1.24x`) sans régression d'accuracy.
+- Itération additionnelle scheduler `max_steps` (même protocole local `2` epochs) :
+  - `20/40/100` : `train_time_sec=25.26`, `test_acc=0.855`, `train_acc=0.8528`
+  - gain vs `30/60/100` : `-15.93s` (`~38.7%`, `~1.63x`)
+  - gain vs `50/80/100` : `-25.90s` (`~50.6%`, `~2.03x`)
+  - accuracy stable (pas de baisse sur ce protocole).
+- Validation robuste (run long local `10` epochs, `phase1=3`, `phase2=3`) :
+  - `30/60/100` : `train_time_sec=357.59`, `test_acc=0.841`, `train_acc=0.8458`
+  - `20/40/100` : `train_time_sec=307.71`, `test_acc=0.841`, `train_acc=0.8454`
+  - gain `20/40/100` vs `30/60/100` : `-49.88s` (`~13.9%`, `~1.16x`)
+  - conclusion : accélération confirmée sur run long, sans baisse test accuracy.
+- Ajout d'un scheduler de méthode d'intégration par phase :
+  - `PhaseConfig.phase1_integrator_method`
+  - `PhaseConfig.phase2_integrator_method`
+  - `PhaseConfig.phase3_integrator_method`
+  - support CLI dans `experiments/profile_training_runtime.py` :
+    - `--phase1-integrator-method`
+    - `--phase2-integrator-method`
+    - `--phase3-integrator-method`
+- `HAMLTrainer` applique désormais ce scheduler à chaque epoch
+  en plus du scheduler `max_steps`.
+- Test ajouté : `tests/test_phase_integrator_method_schedule.py`
+  (vérifie le switch effectif `euler -> rk4` entre phases).
+- Résultat mesuré (local, `make_moons`, `2` epochs, scheduler `20/40/100`) :
+  - baseline `RK4` : `train_time_sec=30.24`, `test_acc=0.855`, `train_acc=0.8528`
+  - variante `Euler` phase 1/2 : `train_time_sec=7.82`, `test_acc=0.854`, `train_acc=0.8526`
+  - gain : `-22.41s` (`~74.1%`, `~3.87x`) avec écart accuracy négligeable.
+- Validation robuste (local, `make_moons`, `10` epochs, `phase1=3`, `phase2=3`, scheduler `20/40/100`) :
+  - baseline `RK4` : `train_time_sec=292.24`, `test_acc=0.841`, `train_acc=0.8454`
+  - variante `Euler` phase 1/2 + `RK4` phase 3 : `train_time_sec=230.77`, `test_acc=0.841`, `train_acc=0.8454`
+  - gain : `-61.47s` (`~21.0%`, `~1.27x`) sans perte observée.
 
 ### Modifié - 2026-05-17
 - Campagne F (Fashion-MNIST) complétée avec comparaison `coupled_tuned` vs `independent` sur seeds `42..46` :
