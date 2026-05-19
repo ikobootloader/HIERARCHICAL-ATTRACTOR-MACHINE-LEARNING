@@ -137,3 +137,50 @@ def test_trainer_accepts_grouped_configs():
     assert trainer.adaptive_mu_sep_config.enabled is False
     assert trainer.soft_landing_config.lr_factor == 0.2
     assert trainer.collapse_guard_config.enabled is True
+
+
+def test_haml_exposes_phase_runtime_knobs_in_get_params():
+    model = HAML(
+        phase1_max_steps=20,
+        phase2_max_steps=40,
+        phase3_max_steps=100,
+        phase1_integrator_method="euler",
+        phase2_integrator_method="euler",
+        phase3_integrator_method="rk4",
+        diagnostics_every_epochs=2,
+        diagnostics_subset_size=512,
+    )
+    params = model.get_params()
+    assert params["phase1_max_steps"] == 20
+    assert params["phase2_max_steps"] == 40
+    assert params["phase3_max_steps"] == 100
+    assert params["phase1_integrator_method"] == "euler"
+    assert params["phase2_integrator_method"] == "euler"
+    assert params["phase3_integrator_method"] == "rk4"
+    assert params["diagnostics_every_epochs"] == 2
+    assert params["diagnostics_subset_size"] == 512
+
+
+def test_haml_fast_train_cpu_preset_applies_defaults():
+    model = HAML(training_preset="fast_train_cpu")
+    params = model.get_params()
+    assert params["training_preset"] == "fast_train_cpu"
+    assert params["phase1_max_steps"] == 20
+    assert params["phase2_max_steps"] == 40
+    assert params["phase3_max_steps"] == 100
+    assert params["phase1_integrator_method"] == "euler"
+    assert params["phase2_integrator_method"] == "euler"
+    assert params["phase3_integrator_method"] == "rk4"
+
+
+def test_haml_fast_train_cpu_preset_respects_explicit_overrides():
+    model = HAML(
+        training_preset="fast_train_cpu",
+        phase1_max_steps=30,
+        phase1_integrator_method="rk4",
+    )
+    params = model.get_params()
+    assert params["phase1_max_steps"] == 30
+    assert params["phase1_integrator_method"] == "rk4"
+    assert params["phase2_max_steps"] == 40
+    assert params["phase2_integrator_method"] == "euler"
