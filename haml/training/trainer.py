@@ -88,6 +88,8 @@ class HAMLTrainer:
             'phase_max_steps': [],
             'events': [],
         }
+        self._last_epoch_accuracy = None
+        self._last_epoch_level_accuracy = None
 
         # Sauvegarde des alphas originaux
         self.alpha_bu_target = model.coupling.alpha_bu.item()
@@ -159,6 +161,7 @@ class HAMLTrainer:
                 else:
                     self._set_coupling_phase3()
             self._set_phase_max_steps(phase)
+            self._set_phase_integrator_method(phase)
 
             # Epoch
             epoch_loss = 0.0
@@ -235,11 +238,34 @@ class HAMLTrainer:
                 if epoch_convergence_count > 0 else None
             )
 
-            # Accuracy
+            # Accuracy / diagnostics (full every N epochs, cached otherwise)
+            do_full_diag = ((epoch + 1) % max(1, int(self.phase_config.diagnostics_every_epochs)) == 0)
+            if do_full_diag:
+                X_diag = X_train
+                y_diag = y_train
+            else:
+                subset_size = self.phase_config.diagnostics_subset_size
+                if subset_size is None:
+                    subset_size = min(len(X_train), 1000)
+                if subset_size >= len(X_train):
+                    X_diag = X_train
+                    y_diag = y_train
+                else:
+                    diag_idx = np.random.choice(len(X_train), size=subset_size, replace=False)
+                    X_diag = X_train[diag_idx]
+                    y_diag = y_train[diag_idx]
+
             with torch.no_grad():
-                y_pred = self.model.predict(X_train)
-                accuracy = np.mean(y_pred == y_train)
-                level_accuracy = compute_level_accuracy(self.model, X_train, y_train)
+                y_pred = self.model.predict(X_diag)
+                accuracy = np.mean(y_pred == y_diag)
+                level_accuracy = compute_level_accuracy(self.model, X_diag, y_diag)
+            if do_full_diag:
+                self._last_epoch_accuracy = float(accuracy)
+                self._last_epoch_level_accuracy = list(level_accuracy)
+            elif self._last_epoch_accuracy is not None and self._last_epoch_level_accuracy is not None:
+                # Keep stability logic and reported metrics tied to last full-train snapshot.
+                accuracy = self._last_epoch_accuracy
+                level_accuracy = self._last_epoch_level_accuracy
 
             # Validation
             if X_val is not None:
@@ -511,6 +537,22 @@ class HAMLTrainer:
             configured = self.phase_config.phase3_max_steps
         if configured is not None:
             self.model.integrator.max_steps = int(configured)
+
+    def _set_phase_integrator_method(self, phase):
+        """Apply optional per-phase integrator method schedule."""
+        configured = None
+        if phase == 1:
+            configured = self.phase_config.phase1_integrator_method
+        elif phase == 2:
+            configured = self.phase_config.phase2_integrator_method
+        else:
+            configured = self.phase_config.phase3_integrator_method
+        if configured is None:
+            return
+        method = str(configured).strip().lower()
+        if method not in {"euler", "rk4", "adjoint"}:
+            raise ValueError(f"Unsupported integrator method in phase config: {configured}")
+        self.model.integrator.method = method
 
     def _freeze_mu_positions(self):
         """GÃ¨le les positions des attracteurs (mu) pour limiter la dÃ©rive tardive."""

@@ -16,6 +16,14 @@ class PhaseConfig:
     phase1_max_steps: Optional[int] = None
     phase2_max_steps: Optional[int] = None
     phase3_max_steps: Optional[int] = None
+    # Optional integrator method override per phase (None => keep integrator default).
+    phase1_integrator_method: Optional[str] = None
+    phase2_integrator_method: Optional[str] = None
+    phase3_integrator_method: Optional[str] = None
+    # Full-train diagnostics frequency (1 = every epoch, default behavior).
+    diagnostics_every_epochs: int = 1
+    # Optional capped subset size for diagnostics when not running full evaluation.
+    diagnostics_subset_size: Optional[int] = None
 
 
 @dataclass
