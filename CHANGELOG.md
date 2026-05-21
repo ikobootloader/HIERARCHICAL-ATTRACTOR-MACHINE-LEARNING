@@ -131,8 +131,12 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
   - `training_preset='fast_train_cpu'` dans `HAML(...)`
   - applique par défaut `20/40/100` + `euler/euler/rk4`
   - respecte les overrides explicites fournis au constructeur.
+- Ajout d'un preset runtime complémentaire :
+  - `training_preset='ultra_fast_train_cpu'` dans `HAML(...)`
+  - applique par défaut `20/40/100` + `euler/euler/euler`
+  - respecte les overrides explicites fournis au constructeur.
 - `experiments/profile_training_runtime.py` expose maintenant :
-  - `--training-preset fast_train_cpu`
+  - `--training-preset fast_train_cpu|ultra_fast_train_cpu`
   - résolution propre des paramètres phase/méthode/diagnostics :
     - les flags CLI explicites restent prioritaires,
     - sinon fallback sur les valeurs du modèle/preset.
@@ -141,10 +145,75 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
   - `probe.effective_phase*_integrator_method`
   - `probe.effective_diagnostics_every_epochs`
   pour tracer la configuration réellement utilisée.
+- Correctif de reporting profiling :
+  - `probe.effective_diagnostics_every_epochs` reflète maintenant la valeur
+    réellement appliquée par `trainer.phase_config`.
+  - ajout de `probe.effective_diagnostics_subset_size`.
+- Correctif de reporting profiling (méthodes/steps de phase) :
+  - `probe.effective_phase*_max_steps` et
+    `probe.effective_phase*_integrator_method` reflètent désormais
+    `trainer.phase_config` (configuration réellement appliquée).
+- Ablation diagnostics (préliminaire, seed `42`, Fashion-MNIST, CPU, `10` epochs, `fast_train_cpu`) :
+  - baseline `diagnostics_every_epochs=1` : `train_time_sec=1721.36`, `test_acc=0.798`
+  - variante `diagnostics_every_epochs=2` : `train_time_sec=1815.48`, `test_acc=0.798`
+  - variante `diagnostics_every_epochs=3` : `train_time_sec=1720.71`, `test_acc=0.798`
+  - conclusion provisoire : pas de gain net clair via espacement des diagnostics
+    sur ce protocole seed unique.
+- Ablation intégrateur phase 3 (Fashion-MNIST, CPU, `10` epochs, seeds `42..44`) :
+  - référence `fast_train_cpu` (`euler/euler/rk4`) :
+    - seed `42`: `1721.36s`, `test_acc=0.798`
+    - seed `43`: `1722.28s`, `test_acc=0.814`
+    - seed `44`: `1415.51s`, `test_acc=0.802`
+    - moyenne : `1619.72s`, `test_acc_mean=0.8047`
+  - variante agressive (`phase3_integrator_method=euler`, donc `euler/euler/euler`) :
+    - seed `42`: `469.74s`, `test_acc=0.798`
+    - seed `43`: `455.09s`, `test_acc=0.814`
+    - seed `44`: `449.46s`, `test_acc=0.802`
+    - moyenne : `458.10s`, `test_acc_mean=0.8047`
+  - gain moyen : `-1161.62s` (`~71.7%`, `~3.54x`) sans perte accuracy observée.
+- Validation opérationnelle du preset `ultra_fast_train_cpu` :
+  - run complet seed `42`, Fashion-MNIST CPU, `10` epochs
+  - `train_time_sec=471.67`, `test_acc=0.798`, `train_acc=0.8216`
+  - `effective_phase*_integrator_method=euler/euler/euler`
+  - cohérence confirmée avec l'ablation `phase3=euler`.
+- Validation multi-seeds du preset `ultra_fast_train_cpu` (Fashion-MNIST CPU, `10` epochs, seeds `42..44`) :
+  - seed `42` : `train_time_sec=471.67`, `test_acc=0.798`, `train_acc=0.8216`
+  - seed `43` : `train_time_sec=451.36`, `test_acc=0.814`, `train_acc=0.8286`
+  - seed `44` : `train_time_sec=465.70`, `test_acc=0.802`, `train_acc=0.8188`
+  - agrégé : `train_time mean=462.91s`, `test_acc mean=0.8047`, `std~0.0068`.
+- Ajout d'un utilitaire d'agrégation de campagnes runtime :
+  - `experiments/aggregate_profile_runs.py`
+  - agrège plusieurs `profile_summary.json` et exporte moyenne/écart-type
+    (temps train, accuracy test, accuracy train finale, devices).
+- Agrégats produits pour les campagnes Fashion-MNIST CPU (`10` epochs, seeds `42..44`) :
+  - `experiments/profile_runtime_fashion_local_long_rk4_20_40_100_cpu_agg.json`
+  - `experiments/profile_runtime_fashion_local_long_fastpreset_cpu_agg.json`
+  - `experiments/profile_runtime_fashion_local_long_ultra_fastpreset_cpu_agg.json`
+- README enrichi avec une synthèse exécutive tabulaire
+  `RK4 vs fast_train_cpu vs ultra_fast_train_cpu`
+  (temps moyen, accuracy moyenne, gain relatif vs baseline).
+- Ajout d'un runner d'ablation qualité/modèle :
+  - `experiments/quality_ablation_runtime.py`
+  - protocoles comparatifs standardisés pour :
+    - `B1`: `repulsion_mode global vs inter_class_only`
+    - `B2`: `sigma_init_mode sqrt_d_std vs median_pairwise`
+    - `B3`: `learn_projections False vs True`
+  - sortie JSON agrégée (moyenne/écart-type + détail par seed).
+- Extension modèle pour B2 :
+  - `sigma_init_mode` ajouté à `HAML`, `Level` et `LevelVectorized`
+  - modes supportés :
+    - `sqrt_d_std` (historique, par défaut)
+    - `median_pairwise` (heuristique médiane des distances intra-classe).
+- Test ajouté :
+  - `tests/test_refactor_invariants.py::test_haml_exposes_sigma_init_mode_param`.
+- Smoke test runner ablation validé :
+  - `quality_ablation_runtime.py --ablation b1 --dataset make_moons ...`
+  - JSON produit : `experiments/quality_ablation_smoke_b1.json`.
 - Test de non-régression ajouté :
   - `tests/test_refactor_invariants.py::test_haml_exposes_phase_runtime_knobs_in_get_params`.
   - `tests/test_refactor_invariants.py::test_haml_fast_train_cpu_preset_applies_defaults`.
   - `tests/test_refactor_invariants.py::test_haml_fast_train_cpu_preset_respects_explicit_overrides`.
+  - `tests/test_refactor_invariants.py::test_haml_ultra_fast_train_cpu_preset_applies_defaults`.
 
 ### Modifié - 2026-05-17
 - Campagne F (Fashion-MNIST) complétée avec comparaison `coupled_tuned` vs `independent` sur seeds `42..46` :

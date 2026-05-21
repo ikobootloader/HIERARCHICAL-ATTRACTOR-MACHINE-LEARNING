@@ -76,6 +76,12 @@ Notes de configuration :
     - `phase1_integrator_method='euler'`, `phase2_integrator_method='euler'`,
       `phase3_integrator_method='rk4'`
   - les paramètres explicitement fournis dans `HAML(...)` restent prioritaires.
+- Preset ultra-rapide CPU :
+  - `training_preset='ultra_fast_train_cpu'` applique automatiquement :
+    - `phase1_max_steps=20`, `phase2_max_steps=40`, `phase3_max_steps=100`
+    - `phase1_integrator_method='euler'`, `phase2_integrator_method='euler'`,
+      `phase3_integrator_method='euler'`
+  - à utiliser quand l'objectif principal est la réduction maximale du temps de train.
 - Les diagnostics de fin d'epoch peuvent être espacés pour réduire le coût :
   - `diagnostics_every_epochs` (défaut `1`),
   - `diagnostics_subset_size` (taille de sous-échantillon pour epochs non full).
@@ -182,6 +188,7 @@ Note reporting :
 
 Commande preset (CPU) :
 - `python experiments/profile_training_runtime.py --dataset fashion_mnist --n-train 5000 --n-test 1000 --n-epochs 10 --phase1-epochs 3 --phase2-epochs 3 --training-preset fast_train_cpu --use-vectorized-levels --device cpu --skip-line-profiler --out-dir experiments/profile_runtime_fashion_local_long_fastpreset_cpu`
+- `python experiments/profile_training_runtime.py --dataset fashion_mnist --n-train 5000 --n-test 1000 --n-epochs 10 --phase1-epochs 3 --phase2-epochs 3 --training-preset ultra_fast_train_cpu --use-vectorized-levels --device cpu --skip-line-profiler --out-dir experiments/profile_runtime_fashion_local_long_ultra_fastpreset_cpu`
 
 Résultats A/B locaux (validation perf scheduler `max_steps`) :
 - protocole :
@@ -305,6 +312,84 @@ Campagne multi-seeds `fast_train_cpu` (Fashion-MNIST, local CPU, `10` epochs, se
   - `test_accuracy mean = 0.8047` (`std ~ 0.0068`)
 - note :
   - le preset est bien appliqué (`effective_phase*=20/40/100`, `effective_methods=euler/euler/rk4` dans `profile_summary.json`).
+
+Étape suivante - ablation diagnostics (préliminaire, seed `42`, Fashion-MNIST, CPU, `10` epochs, `fast_train_cpu`) :
+- baseline (`diagnostics_every_epochs=1`) :
+  - `train_time_sec=1721.36`
+  - `test_accuracy=0.798`
+  - `final_train_accuracy=0.8216`
+- variante `diagnostics_every_epochs=2` :
+  - `train_time_sec=1815.48` (plus lent)
+  - `test_accuracy=0.798`
+  - `final_train_accuracy=0.8216`
+- variante `diagnostics_every_epochs=3` :
+  - `train_time_sec=1720.71` (quasi identique baseline)
+  - `test_accuracy=0.798`
+  - `final_train_accuracy=0.8170`
+- lecture :
+  - sur ce protocole seed unique, espacer les diagnostics n'apporte pas de gain net clair.
+  - la décision finale doit être confirmée en multi-seeds avant généralisation.
+
+Étape suivante - variante agressive intégrateur (Fashion-MNIST, CPU, `10` epochs, seeds `42..44`) :
+- référence `fast_train_cpu` (méthodes `euler/euler/rk4`) :
+  - seed `42`: `1721.36s`, `test=0.798`
+  - seed `43`: `1722.28s`, `test=0.814`
+  - seed `44`: `1415.51s`, `test=0.802`
+  - moyenne: `1619.72s`, `test_mean=0.8047`
+- variante agressive (override `phase3_integrator_method=euler`, donc `euler/euler/euler`) :
+  - seed `42`: `469.74s`, `test=0.798`
+  - seed `43`: `455.09s`, `test=0.814`
+  - seed `44`: `449.46s`, `test=0.802`
+  - moyenne: `458.10s`, `test_mean=0.8047`
+- conclusion :
+  - gain net moyen `-1161.62s` (`~71.7%`, `~3.54x`) sans perte accuracy observée sur ces seeds.
+  - c'est actuellement le levier runtime le plus efficace du plan.
+
+Validation preset `ultra_fast_train_cpu` (run complet, seed `42`, Fashion-MNIST, CPU, `10` epochs) :
+- `train_time_sec=471.67`
+- `test_accuracy=0.798`
+- `final_train_accuracy=0.8216`
+- `effective_methods=euler/euler/euler`
+- lecture :
+  - cohérent avec l'ablation précédente (`phase3=euler`) et sans régression accuracy sur ce seed.
+
+Validation multi-seeds preset `ultra_fast_train_cpu` (Fashion-MNIST, CPU, `10` epochs, seeds `42..44`) :
+- seed `42` : `train_time_sec=471.67`, `test_accuracy=0.798`, `train_accuracy=0.8216`
+- seed `43` : `train_time_sec=451.36`, `test_accuracy=0.814`, `train_accuracy=0.8286`
+- seed `44` : `train_time_sec=465.70`, `test_accuracy=0.802`, `train_accuracy=0.8188`
+- agrégé (`3` seeds) :
+  - `train_time_sec mean = 462.91s` (~7m43s)
+  - `test_accuracy mean = 0.8047` (`std ~ 0.0068`)
+- lecture :
+  - même accuracy moyenne que les variantes précédentes, avec un gain temps majeur.
+
+Synthèse exécutive (Fashion-MNIST, CPU, `10` epochs, seeds `42..44`) :
+
+| Variante | Intégrateur phase 1/2/3 | Train time moyen | Test acc moyenne | Écart vs RK4 |
+|---|---|---:|---:|---:|
+| RK4 baseline | `rk4/rk4/rk4` | `1844.72s` | `0.8047` | référence |
+| `fast_train_cpu` | `euler/euler/rk4` | `1619.72s` | `0.8047` | `-12.2%` temps (`~1.14x`) |
+| `ultra_fast_train_cpu` | `euler/euler/euler` | `462.91s` | `0.8047` | `-74.9%` temps (`~3.98x`) |
+
+Outil d'agrégation des campagnes runtime :
+- script : `experiments/aggregate_profile_runs.py`
+- usage :
+  - `python experiments/aggregate_profile_runs.py --run-dirs <dir1> <dir2> <dir3> --out-json <agg.json>`
+- sorties agrégées générées pour les campagnes CPU Fashion-MNIST (`10` epochs, seeds `42..44`) :
+  - `experiments/profile_runtime_fashion_local_long_rk4_20_40_100_cpu_agg.json`
+  - `experiments/profile_runtime_fashion_local_long_fastpreset_cpu_agg.json`
+  - `experiments/profile_runtime_fashion_local_long_ultra_fastpreset_cpu_agg.json`
+
+Ablations qualité/modèle (B1/B2/B3) :
+- script dédié : `experiments/quality_ablation_runtime.py`
+- leviers supportés :
+  - `--ablation b1` : `repulsion_mode=global` vs `inter_class_only`
+  - `--ablation b2` : `sigma_init_mode=sqrt_d_std` vs `median_pairwise`
+  - `--ablation b3` : `learn_projections=False` vs `True`
+- protocole recommandé (Fashion-MNIST CPU, seeds `42 43 44`) :
+  - `python experiments/quality_ablation_runtime.py --ablation b1 --dataset fashion_mnist --seeds 42 43 44 --n-train 5000 --n-test 1000 --n-epochs 10 --phase1-epochs 3 --phase2-epochs 3 --training-preset ultra_fast_train_cpu --device cpu --out-json experiments/quality_ablation_b1_fashion_cpu.json`
+  - `python experiments/quality_ablation_runtime.py --ablation b2 --dataset fashion_mnist --seeds 42 43 44 --n-train 5000 --n-test 1000 --n-epochs 10 --phase1-epochs 3 --phase2-epochs 3 --training-preset ultra_fast_train_cpu --device cpu --out-json experiments/quality_ablation_b2_fashion_cpu.json`
+  - `python experiments/quality_ablation_runtime.py --ablation b3 --dataset fashion_mnist --seeds 42 43 44 --n-train 5000 --n-test 1000 --n-epochs 10 --phase1-epochs 3 --phase2-epochs 3 --training-preset ultra_fast_train_cpu --device cpu --out-json experiments/quality_ablation_b3_fashion_cpu.json`
 
 ### Campagne A - MNIST subset (1500/500, 5 epochs)
 
