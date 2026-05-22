@@ -184,3 +184,29 @@ def test_haml_fast_train_cpu_preset_respects_explicit_overrides():
     assert params["phase1_integrator_method"] == "rk4"
     assert params["phase2_max_steps"] == 40
     assert params["phase2_integrator_method"] == "euler"
+
+
+def test_haml_ultra_fast_train_cpu_preset_applies_defaults():
+    model = HAML(training_preset="ultra_fast_train_cpu")
+    params = model.get_params()
+    assert params["training_preset"] == "ultra_fast_train_cpu"
+    assert params["phase1_max_steps"] == 20
+    assert params["phase2_max_steps"] == 40
+    assert params["phase3_max_steps"] == 100
+    assert params["phase1_integrator_method"] == "euler"
+    assert params["phase2_integrator_method"] == "euler"
+    assert params["phase3_integrator_method"] == "euler"
+    assert params["learn_projections"] is True
+
+
+def test_haml_training_preset_respects_explicit_learn_projections_override():
+    model = HAML(training_preset="ultra_fast_train_cpu", learn_projections=False)
+    params = model.get_params()
+    assert params["training_preset"] == "ultra_fast_train_cpu"
+    assert params["learn_projections"] is False
+
+
+def test_haml_exposes_sigma_init_mode_param():
+    model = HAML(sigma_init_mode="median_pairwise")
+    params = model.get_params()
+    assert params["sigma_init_mode"] == "median_pairwise"
