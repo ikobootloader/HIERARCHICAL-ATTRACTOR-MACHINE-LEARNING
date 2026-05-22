@@ -75,12 +75,14 @@ Notes de configuration :
     - `phase1_max_steps=20`, `phase2_max_steps=40`, `phase3_max_steps=100`
     - `phase1_integrator_method='euler'`, `phase2_integrator_method='euler'`,
       `phase3_integrator_method='rk4'`
+    - `learn_projections=True` (si non explicitement fourni)
   - les paramètres explicitement fournis dans `HAML(...)` restent prioritaires.
 - Preset ultra-rapide CPU :
   - `training_preset='ultra_fast_train_cpu'` applique automatiquement :
     - `phase1_max_steps=20`, `phase2_max_steps=40`, `phase3_max_steps=100`
     - `phase1_integrator_method='euler'`, `phase2_integrator_method='euler'`,
       `phase3_integrator_method='euler'`
+    - `learn_projections=True` (si non explicitement fourni)
   - à utiliser quand l'objectif principal est la réduction maximale du temps de train.
 - Les diagnostics de fin d'epoch peuvent être espacés pour réduire le coût :
   - `diagnostics_every_epochs` (défaut `1`),
@@ -380,16 +382,78 @@ Outil d'agrégation des campagnes runtime :
   - `experiments/profile_runtime_fashion_local_long_fastpreset_cpu_agg.json`
   - `experiments/profile_runtime_fashion_local_long_ultra_fastpreset_cpu_agg.json`
 
-Ablations qualité/modèle (B1/B2/B3) :
+Ablations qualité/modèle (B1/B2/B3/B23) :
 - script dédié : `experiments/quality_ablation_runtime.py`
 - leviers supportés :
   - `--ablation b1` : `repulsion_mode=global` vs `inter_class_only`
   - `--ablation b2` : `sigma_init_mode=sqrt_d_std` vs `median_pairwise`
   - `--ablation b3` : `learn_projections=False` vs `True`
+  - `--ablation b23` : croisement `sigma_init_mode` x `learn_projections` (2x2)
 - protocole recommandé (Fashion-MNIST CPU, seeds `42 43 44`) :
   - `python experiments/quality_ablation_runtime.py --ablation b1 --dataset fashion_mnist --seeds 42 43 44 --n-train 5000 --n-test 1000 --n-epochs 10 --phase1-epochs 3 --phase2-epochs 3 --training-preset ultra_fast_train_cpu --device cpu --out-json experiments/quality_ablation_b1_fashion_cpu.json`
   - `python experiments/quality_ablation_runtime.py --ablation b2 --dataset fashion_mnist --seeds 42 43 44 --n-train 5000 --n-test 1000 --n-epochs 10 --phase1-epochs 3 --phase2-epochs 3 --training-preset ultra_fast_train_cpu --device cpu --out-json experiments/quality_ablation_b2_fashion_cpu.json`
   - `python experiments/quality_ablation_runtime.py --ablation b3 --dataset fashion_mnist --seeds 42 43 44 --n-train 5000 --n-test 1000 --n-epochs 10 --phase1-epochs 3 --phase2-epochs 3 --training-preset ultra_fast_train_cpu --device cpu --out-json experiments/quality_ablation_b3_fashion_cpu.json`
+  - `python experiments/quality_ablation_runtime.py --ablation b23 --dataset fashion_mnist --seeds 42 43 44 --n-train 5000 --n-test 1000 --n-epochs 10 --phase1-epochs 3 --phase2-epochs 3 --training-preset ultra_fast_train_cpu --device cpu --out-json experiments/quality_ablation_b23_fashion_cpu.json`
+
+Résultat B1 (Fashion-MNIST, CPU, seeds `42..44`, `ultra_fast_train_cpu`) :
+- `repulsion_mode=global` :
+  - `train_time_mean=1484.18s` (`std=578.54s`)
+  - `test_accuracy_mean=0.8047`
+- `repulsion_mode=inter_class_only` :
+  - `train_time_mean=3324.96s` (`std=1042.98s`)
+  - `test_accuracy_mean=0.8047`
+- conclusion B1 :
+  - pas de gain accuracy observé avec `inter_class_only`,
+  - surcoût compute très élevé (`~2.24x` plus lent en moyenne),
+  - `global` est retenu comme meilleur compromis opérationnel.
+
+Résultat B2 (Fashion-MNIST, CPU, seeds `42..44`, `ultra_fast_train_cpu`) :
+- `sigma_init_mode=sqrt_d_std` :
+  - `train_time_mean=551.53s` (`std=2.96s`)
+  - `test_accuracy_mean=0.8047` (`std=0.0068`)
+  - `final_train_accuracy_mean=0.8229`
+- `sigma_init_mode=median_pairwise` :
+  - `train_time_mean=528.14s` (`std=16.15s`)
+  - `test_accuracy_mean=0.8047` (`std=0.0052`)
+  - `final_train_accuracy_mean=0.8241`
+- conclusion B2 :
+  - accuracy test moyenne identique entre les deux variantes (`0.8047`),
+  - gain runtime modeste en faveur de `median_pairwise` (`-23.38s`, `~4.2%`),
+  - `median_pairwise` est un candidat raisonnable pour le défaut opérationnel.
+
+Résultat B3 (Fashion-MNIST, CPU, seeds `42..44`, `ultra_fast_train_cpu`) :
+- `learn_projections=False` :
+  - `train_time_mean=491.11s` (`std=51.09s`)
+  - `test_accuracy_mean=0.8047` (`std=0.0068`)
+  - `final_train_accuracy_mean=0.8229`
+- `learn_projections=True` :
+  - `train_time_mean=355.04s` (`std=14.10s`)
+  - `test_accuracy_mean=0.8187` (`std=0.0061`)
+  - `final_train_accuracy_mean=0.8863`
+- conclusion B3 :
+  - gain accuracy test net avec projections apprises (`+1.4 points`),
+  - gain runtime significatif (`-136.08s`, `~27.7%`, `~1.38x` plus rapide),
+  - `learn_projections=True` est recommandé sur ce protocole.
+
+Résultat B23 (Fashion-MNIST, CPU, seeds `42..44`, `ultra_fast_train_cpu`) :
+- `sigma_sqrt_d_std + learn_projections=False` :
+  - `train_time_mean=588.73s`
+  - `test_accuracy_mean=0.8047`
+- `sigma_median_pairwise + learn_projections=False` :
+  - `train_time_mean=561.94s`
+  - `test_accuracy_mean=0.8047`
+- `sigma_sqrt_d_std + learn_projections=True` :
+  - `train_time_mean=379.60s`
+  - `test_accuracy_mean=0.8187`
+- `sigma_median_pairwise + learn_projections=True` :
+  - `train_time_mean=418.60s`
+  - `test_accuracy_mean=0.8163`
+- conclusion B23 :
+  - le levier dominant est `learn_projections=True` (gain net qualité et runtime),
+  - avec projections apprises, `sigma_sqrt_d_std` domine `median_pairwise`
+    (meilleur score test et temps plus faible),
+  - recommandation opérationnelle sur ce protocole :
+    `sigma_init_mode='sqrt_d_std'` + `learn_projections=True`.
 
 ### Campagne A - MNIST subset (1500/500, 5 epochs)
 

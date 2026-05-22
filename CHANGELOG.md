@@ -198,6 +198,7 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
     - `B1`: `repulsion_mode global vs inter_class_only`
     - `B2`: `sigma_init_mode sqrt_d_std vs median_pairwise`
     - `B3`: `learn_projections False vs True`
+    - `B23`: croisement `sigma_init_mode x learn_projections` (2x2)
   - sortie JSON agrégée (moyenne/écart-type + détail par seed).
 - Extension modèle pour B2 :
   - `sigma_init_mode` ajouté à `HAML`, `Level` et `LevelVectorized`
@@ -209,11 +210,76 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 - Smoke test runner ablation validé :
   - `quality_ablation_runtime.py --ablation b1 --dataset make_moons ...`
   - JSON produit : `experiments/quality_ablation_smoke_b1.json`.
+- Smoke test runner ablation combinée validé :
+  - `quality_ablation_runtime.py --ablation b23 --dataset make_moons ...`
+  - JSON produit : `experiments/quality_ablation_smoke_b23.json`.
+- Campagne B1 complétée (Fashion-MNIST, CPU, seeds `42..44`, preset `ultra_fast_train_cpu`) :
+  - fichier : `experiments/quality_ablation_b1_fashion_cpu.json`
+  - `repulsion_global` :
+    - `train_time_mean=1484.18s` (`std=578.54s`)
+    - `test_acc_mean=0.8047`
+  - `repulsion_inter_class_only` :
+    - `train_time_mean=3324.96s` (`std=1042.98s`)
+    - `test_acc_mean=0.8047`
+  - conclusion :
+    - aucune amélioration accuracy observée,
+    - surcoût runtime majeur (`~2.24x` plus lent),
+    - `repulsion_mode=global` conservé comme choix opérationnel.
+- Campagne B2 complétée (Fashion-MNIST, CPU, seeds `42..44`, preset `ultra_fast_train_cpu`) :
+  - fichier : `experiments/quality_ablation_b2_fashion_cpu.json`
+  - `sigma_init_mode=sqrt_d_std` :
+    - `train_time_mean=551.53s` (`std=2.96s`)
+    - `test_acc_mean=0.8047`
+  - `sigma_init_mode=median_pairwise` :
+    - `train_time_mean=528.14s` (`std=16.15s`)
+    - `test_acc_mean=0.8047`
+  - conclusion :
+    - accuracy inchangée entre variantes,
+    - gain runtime modeste pour `median_pairwise` (`~4.2%`),
+    - `median_pairwise` retenu comme candidat défaut opérationnel.
+- Campagne B3 complétée (Fashion-MNIST, CPU, seeds `42..44`, preset `ultra_fast_train_cpu`) :
+  - fichier : `experiments/quality_ablation_b3_fashion_cpu.json`
+  - `learn_projections=False` :
+    - `train_time_mean=491.11s` (`std=51.09s`)
+    - `test_acc_mean=0.8047`
+  - `learn_projections=True` :
+    - `train_time_mean=355.04s` (`std=14.10s`)
+    - `test_acc_mean=0.8187`
+  - conclusion :
+    - gain accuracy `+1.4 points`,
+    - gain runtime `~27.7%` (`~1.38x`),
+    - `learn_projections=True` recommandé sur ce protocole.
+- Campagne B23 complétée (Fashion-MNIST, CPU, seeds `42..44`, preset `ultra_fast_train_cpu`) :
+  - fichier : `experiments/quality_ablation_b23_fashion_cpu.json`
+  - `sigma_sqrt_d_std + learn_projections=False` :
+    - `train_time_mean=588.73s`
+    - `test_acc_mean=0.8047`
+  - `sigma_median_pairwise + learn_projections=False` :
+    - `train_time_mean=561.94s`
+    - `test_acc_mean=0.8047`
+  - `sigma_sqrt_d_std + learn_projections=True` :
+    - `train_time_mean=379.60s`
+    - `test_acc_mean=0.8187`
+  - `sigma_median_pairwise + learn_projections=True` :
+    - `train_time_mean=418.60s`
+    - `test_acc_mean=0.8163`
+  - conclusion :
+    - levier dominant confirmé: `learn_projections=True`,
+    - avec projections apprises, `sigma_sqrt_d_std` est meilleur que
+      `median_pairwise` en accuracy et runtime,
+    - recommandation opérationnelle consolidée :
+      `sigma_init_mode='sqrt_d_std'` + `learn_projections=True`.
+- Défaut opérationnel presets runtime ajusté :
+  - `training_preset=fast_train_cpu` et `training_preset=ultra_fast_train_cpu`
+    activent désormais `learn_projections=True` quand le paramètre n'est pas
+    explicitement fourni.
+  - un override explicite `learn_projections=False` reste prioritaire.
 - Test de non-régression ajouté :
   - `tests/test_refactor_invariants.py::test_haml_exposes_phase_runtime_knobs_in_get_params`.
   - `tests/test_refactor_invariants.py::test_haml_fast_train_cpu_preset_applies_defaults`.
   - `tests/test_refactor_invariants.py::test_haml_fast_train_cpu_preset_respects_explicit_overrides`.
   - `tests/test_refactor_invariants.py::test_haml_ultra_fast_train_cpu_preset_applies_defaults`.
+  - `tests/test_refactor_invariants.py::test_haml_training_preset_respects_explicit_learn_projections_override`.
 
 ### Modifié - 2026-05-17
 - Campagne F (Fashion-MNIST) complétée avec comparaison `coupled_tuned` vs `independent` sur seeds `42..46` :
