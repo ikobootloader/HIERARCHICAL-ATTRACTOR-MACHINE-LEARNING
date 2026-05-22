@@ -1,0 +1,48 @@
+         10669583 function calls (10581190 primitive calls) in 475.843 seconds
+
+   Ordered by: cumulative time
+   List reduced from 6340 to 40 due to restriction <40>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    1.396    1.396  465.690  465.690 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\training\trainer.py:98(train)
+      421    2.391    0.006  289.074    0.687 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\dynamics\integrator.py:172(integrate)
+    24460   14.724    0.001  269.310    0.011 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\dynamics\integrator.py:120(step_euler)
+    24460    7.620    0.000  254.553    0.010 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\dynamics\integrator.py:106(velocity_field)
+    24460    8.421    0.000  246.933    0.010 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\dynamics\integrator.py:80(compute_forces)
+      400    0.004    0.000  171.356    0.428 C:\Python312\Lib\site-packages\torch\_tensor.py:592(backward)
+      400    0.007    0.000  171.353    0.428 C:\Python312\Lib\site-packages\torch\autograd\__init__.py:243(backward)
+      400    0.004    0.000  171.324    0.428 C:\Python312\Lib\site-packages\torch\autograd\graph.py:815(_engine_run_backward)
+      400  171.320    0.428  171.320    0.428 {method 'run_backward' of 'torch._C._EngineBase' objects}
+       21    0.000    0.000  147.039    7.002 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\model\haml.py:384(forward)
+    73380   15.230    0.000  128.789    0.002 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\dynamics\level_vectorized.py:188(intra_level_force)
+   146760   72.503    0.000  111.203    0.001 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\dynamics\level_vectorized.py:114(_flat_force)
+    73380    8.411    0.000  109.337    0.001 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\dynamics\coupling.py:142(total_force)
+       11    0.001    0.000   76.568    6.961 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\model\haml.py:402(predict)
+       10    0.002    0.000   73.786    7.379 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\training\metrics.py:13(compute_level_accuracy)
+    48920   10.480    0.000   60.058    0.001 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\dynamics\coupling.py:56(bottom_up_force)
+    97840   47.940    0.000   48.738    0.000 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\projection\spaces.py:127(project_up)
+    48920   13.060    0.000   38.537    0.001 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\dynamics\coupling.py:87(top_down_force)
+    49764   24.936    0.001   25.317    0.001 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\projection\spaces.py:107(project_down)
+445540/445523    0.481    0.000   17.007    0.000 C:\Python312\Lib\site-packages\torch\_tensor.py:33(wrapped)
+    32/22    0.031    0.001   16.629    0.756 C:\Python312\Lib\site-packages\torch\_ops.py:316(fallthrough)
+   445507   16.401    0.000   16.401    0.000 {method 'pow' of 'torch._C.TensorBase' objects}
+    24460    9.967    0.000   16.078    0.001 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\dynamics\integrator.py:68(_compute_convergence_fraction)
+   441843   13.861    0.000   13.861    0.000 {built-in method torch.sum}
+   546713    9.137    0.000    9.137    0.000 {built-in method torch.exp}
+    88056    0.886    0.000    5.963    0.000 C:\Python312\Lib\site-packages\torch\functional.py:1698(norm)
+    88056    5.000    0.000    5.000    0.000 {built-in method torch._C._linalg.linalg_vector_norm}
+1204/1203    0.002    0.000    4.514    0.004 C:\Users\fredm\AppData\Roaming\Python\Python312\site-packages\sklearn\utils\_param_validation.py:185(wrapper)
+     1263    1.477    0.001    4.513    0.004 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\haml\dynamics\level_vectorized.py:216(predict_class_scores)
+        1    0.084    0.084    3.972    3.972 C:\Users\fredm\Desktop\Trajectory_pattern_recognition_system\github_app\experiments\profile_training_runtime.py:46(load_fashion_mnist_subset)
+        1    0.000    0.000    3.802    3.802 C:\Users\fredm\AppData\Roaming\Python\Python312\site-packages\sklearn\datasets\_openml.py:754(fetch_openml)
+        5    0.000    0.000    3.801    0.760 C:\Users\fredm\AppData\Roaming\Python\Python312\site-packages\sklearn\datasets\_openml.py:62(wrapper)
+        1    0.000    0.000    3.799    3.799 C:\Users\fredm\AppData\Roaming\Python\Python312\site-packages\sklearn\datasets\_openml.py:572(_download_data_to_bunch)
+        1    0.011    0.011    3.799    3.799 C:\Users\fredm\AppData\Roaming\Python\Python312\site-packages\sklearn\datasets\_openml.py:436(_load_arff_response)
+        1    0.000    0.000    3.012    3.012 C:\Users\fredm\AppData\Roaming\Python\Python312\site-packages\sklearn\datasets\_openml.py:534(_open_url_and_load_gzip_file)
+        1    0.000    0.000    3.012    3.012 C:\Users\fredm\AppData\Roaming\Python\Python312\site-packages\sklearn\datasets\_arff_parser.py:463(load_arff_from_gzip_file)
+        1    0.017    0.017    3.012    3.012 C:\Users\fredm\AppData\Roaming\Python\Python312\site-packages\sklearn\datasets\_arff_parser.py:311(_pandas_arff_parser)
+        1    0.000    0.000    2.754    2.754 C:\Python312\Lib\site-packages\pandas\io\parsers\readers.py:868(read_csv)
+        1    0.030    0.030    2.754    2.754 C:\Python312\Lib\site-packages\pandas\io\parsers\readers.py:583(_read)
+        1    0.001    0.001    2.719    2.719 C:\Python312\Lib\site-packages\pandas\io\parsers\readers.py:1907(read)
+
+

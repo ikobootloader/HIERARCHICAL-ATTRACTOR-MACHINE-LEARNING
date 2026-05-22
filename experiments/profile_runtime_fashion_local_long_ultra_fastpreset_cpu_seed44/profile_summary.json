@@ -1,0 +1,61 @@
+{
+  "config": {
+    "seed": 44,
+    "dataset": "fashion_mnist",
+    "noise": 0.3,
+    "mode": "coupled_tuned",
+    "training_preset": "ultra_fast_train_cpu",
+    "use_vectorized_levels": true,
+    "repulsion_mode": "global",
+    "n_train": 5000,
+    "n_test": 1000,
+    "n_epochs": 10,
+    "phase1_epochs": 3,
+    "phase2_epochs": 3,
+    "phase1_max_steps": null,
+    "phase2_max_steps": null,
+    "phase3_max_steps": null,
+    "phase1_integrator_method": null,
+    "phase2_integrator_method": null,
+    "phase3_integrator_method": null,
+    "diagnostics_every_epochs": null,
+    "diagnostics_subset_size": null,
+    "n_attractors_per_class": 2,
+    "batch_size": 128,
+    "max_steps": 20,
+    "tol": 0.0001,
+    "convergence_check_every": 5,
+    "disable_convergence_check": false,
+    "mu_dyn": 0.0,
+    "lr": 0.01,
+    "device": "cpu",
+    "top_n": 40,
+    "skip_line_profiler": true,
+    "out_dir": "experiments/profile_runtime_fashion_local_long_ultra_fastpreset_cpu_seed44"
+  },
+  "probe": {
+    "resolved_device": "cpu",
+    "effective_phase1_max_steps": 20,
+    "effective_phase2_max_steps": 40,
+    "effective_phase3_max_steps": 100,
+    "effective_phase1_integrator_method": "euler",
+    "effective_phase2_integrator_method": "euler",
+    "effective_phase3_integrator_method": "euler",
+    "effective_diagnostics_every_epochs": 1,
+    "effective_diagnostics_subset_size": null,
+    "train_time_sec": 465.70026210000105,
+    "test_accuracy": 0.802,
+    "final_train_accuracy": 0.8188,
+    "n_history_epochs": 10
+  },
+  "artifacts": {
+    "profile_path": "experiments\\profile_runtime_fashion_local_long_ultra_fastpreset_cpu_seed44\\cprofile_stats.prof",
+    "top_cumtime_path": "experiments\\profile_runtime_fashion_local_long_ultra_fastpreset_cpu_seed44\\cprofile_top_cumtime.txt",
+    "top_tottime_path": "experiments\\profile_runtime_fashion_local_long_ultra_fastpreset_cpu_seed44\\cprofile_top_tottime.txt",
+    "line_profile": {
+      "enabled": false,
+      "skipped": true
+    }
+  },
+  "generated_at_epoch_sec": 1779377023.2639716
+}
