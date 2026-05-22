@@ -28,7 +28,8 @@ class Level(nn.Module):
         n_classes,
         n_attractors_per_class,
         lambda_repulsion=0.5,
-        rho_sigma_ratio=2.0
+        rho_sigma_ratio=2.0,
+        sigma_init_mode="sqrt_d_std",
     ):
         """
         Args:
@@ -47,6 +48,9 @@ class Level(nn.Module):
         self.n_attractors_per_class = n_attractors_per_class
         self.lambda_repulsion = lambda_repulsion
         self.rho_sigma_ratio = rho_sigma_ratio
+        if sigma_init_mode not in ("sqrt_d_std", "median_pairwise"):
+            raise ValueError("sigma_init_mode must be 'sqrt_d_std' or 'median_pairwise'.")
+        self.sigma_init_mode = sigma_init_mode
 
         # Attracteurs organisés par classe
         self.attractors = nn.ModuleDict()
@@ -94,15 +98,9 @@ class Level(nn.Module):
                 kmeans.fit(X_c)
                 positions = torch.from_numpy(kmeans.cluster_centers_).float()
 
-            # Estimation de σ : écart-type local rescalé par √d (curse of dimensionality)
+            # Estimation de sigma (configurable)
             if sigma_init is None:
-                if len(X_c) > 1:
-                    data_std = torch.std(torch.from_numpy(X_c).float()).item()
-                    # Rescaling critique pour haute dimension: σ ~ √d * data_std
-                    sigma = math.sqrt(self.dim) * data_std
-                    sigma = max(sigma, 0.1)  # Borne inf
-                else:
-                    sigma = math.sqrt(self.dim)
+                sigma = self._estimate_sigma_from_class_points(X_c)
             else:
                 sigma = sigma_init
 
@@ -117,6 +115,28 @@ class Level(nn.Module):
                     weight_init=1.0
                 )
                 self.attractors[str(c)].append(attractor)
+
+    def _estimate_sigma_from_class_points(self, x_class):
+        """Estimate sigma for one class according to configured init mode."""
+        if len(x_class) <= 1:
+            return math.sqrt(self.dim)
+
+        x_t = torch.from_numpy(x_class).float()
+        if self.sigma_init_mode == "median_pairwise":
+            # Median heuristic on pairwise distances (robust kernel scale).
+            max_points = min(512, x_t.shape[0])
+            x_t = x_t[:max_points]
+            dists = torch.cdist(x_t, x_t, p=2)
+            upper = dists[torch.triu(torch.ones_like(dists), diagonal=1).bool()]
+            upper = upper[upper > 0]
+            if upper.numel() > 0:
+                return max(float(torch.median(upper).item()) / math.sqrt(2.0), 0.1)
+            # Fallback if all points identical.
+            return 0.1
+
+        # Legacy/default mode: sqrt(d) * local std
+        data_std = torch.std(x_t).item()
+        return max(math.sqrt(self.dim) * data_std, 0.1)
 
     def intra_level_force(self, x):
         """

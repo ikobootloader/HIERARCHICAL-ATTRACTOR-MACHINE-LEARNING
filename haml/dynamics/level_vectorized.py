@@ -63,6 +63,7 @@ class LevelVectorized(nn.Module):
         lambda_repulsion=0.5,
         rho_sigma_ratio=2.0,
         repulsion_mode="global",
+        sigma_init_mode="sqrt_d_std",
     ):
         super().__init__()
         self.level_idx = level_idx
@@ -74,6 +75,9 @@ class LevelVectorized(nn.Module):
         if repulsion_mode not in ("global", "inter_class_only"):
             raise ValueError("repulsion_mode must be 'global' or 'inter_class_only'.")
         self.repulsion_mode = repulsion_mode
+        if sigma_init_mode not in ("sqrt_d_std", "median_pairwise"):
+            raise ValueError("sigma_init_mode must be 'sqrt_d_std' or 'median_pairwise'.")
+        self.sigma_init_mode = sigma_init_mode
 
         self.n_total = self.n_classes * self.n_attractors_per_class
         self.positions = nn.Parameter(torch.empty(self.n_total, self.dim))
@@ -163,14 +167,7 @@ class LevelVectorized(nn.Module):
                 kmeans.fit(X_c)
                 positions_c = torch.from_numpy(kmeans.cluster_centers_).float()
 
-            if sigma_init is None:
-                if len(X_c) > 1:
-                    data_std = torch.std(torch.from_numpy(X_c).float()).item()
-                    sigma = max(math.sqrt(self.dim) * data_std, 0.1)
-                else:
-                    sigma = math.sqrt(self.dim)
-            else:
-                sigma = sigma_init
+            sigma = sigma_init if sigma_init is not None else self._estimate_sigma_from_class_points(X_c)
 
             start = c * self.n_attractors_per_class
             end = start + self.n_attractors_per_class
@@ -184,6 +181,24 @@ class LevelVectorized(nn.Module):
             self.log_sigma.copy_(log_sigma.to(self.log_sigma.device))
             self.log_rho.copy_(log_rho.to(self.log_rho.device))
             self.log_weight.copy_(log_weight.to(self.log_weight.device))
+
+    def _estimate_sigma_from_class_points(self, x_class):
+        if len(x_class) <= 1:
+            return math.sqrt(self.dim)
+
+        x_t = torch.from_numpy(x_class).float()
+        if self.sigma_init_mode == "median_pairwise":
+            max_points = min(512, x_t.shape[0])
+            x_t = x_t[:max_points]
+            dists = torch.cdist(x_t, x_t, p=2)
+            upper = dists[torch.triu(torch.ones_like(dists), diagonal=1).bool()]
+            upper = upper[upper > 0]
+            if upper.numel() > 0:
+                return max(float(torch.median(upper).item()) / math.sqrt(2.0), 0.1)
+            return 0.1
+
+        data_std = torch.std(x_t).item()
+        return max(math.sqrt(self.dim) * data_std, 0.1)
 
     def intra_level_force(self, x):
         sigma_sq = torch.exp(self.log_sigma) ** 2

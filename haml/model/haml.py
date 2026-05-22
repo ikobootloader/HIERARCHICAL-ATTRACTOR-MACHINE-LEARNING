@@ -60,6 +60,7 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
         gamma=1.0,
         lambda_repulsion=0.5,
         rho_sigma_ratio=2.0,
+        sigma_init_mode='sqrt_d_std',
         mu_sep=0.1,
         mu_dyn=0.01,
         integrator_method='rk4',
@@ -67,7 +68,7 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
         max_steps=100,
         tol=1e-4,
         convergence_check_every=5,
-        learn_projections=False,
+        learn_projections=None,
         learn_alphas=False,
         lr=0.01,
         n_epochs=50,
@@ -103,7 +104,8 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
             dt (float): Pas de temps
             max_steps (int): Max itérations ODE
             tol (float): Tolérance convergence
-            learn_projections (bool): Affiner projections PCA
+            learn_projections (bool | None): Affiner projections PCA.
+                Si None, peut être décidé par le preset d'entraînement.
             learn_alphas (bool): Apprendre α_bu, α_td
             level_score_weighting (str): 'uniform' ou 'exponential'
             device (str): 'auto', 'cpu' ou 'cuda'
@@ -121,6 +123,7 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
         self.gamma = gamma
         self.lambda_repulsion = lambda_repulsion
         self.rho_sigma_ratio = rho_sigma_ratio
+        self.sigma_init_mode = sigma_init_mode
         self.mu_sep = mu_sep
         self.mu_dyn = mu_dyn
         self.integrator_method = integrator_method
@@ -147,6 +150,8 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
         self.use_vectorized_levels = use_vectorized_levels
         self.repulsion_mode = repulsion_mode
         self._apply_training_preset()
+        if self.learn_projections is None:
+            self.learn_projections = False
 
         # Modules (initialisés dans fit)
         self.scaler = StandardScaler()
@@ -166,6 +171,8 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
             return
         preset = str(self.training_preset).strip().lower()
         if preset == "fast_train_cpu":
+            if self.learn_projections is None:
+                self.learn_projections = True
             if self.phase1_max_steps is None:
                 self.phase1_max_steps = 20
             if self.phase2_max_steps is None:
@@ -181,9 +188,27 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
             if self.diagnostics_every_epochs == 1:
                 self.diagnostics_every_epochs = 1
             return
+        if preset == "ultra_fast_train_cpu":
+            if self.learn_projections is None:
+                self.learn_projections = True
+            if self.phase1_max_steps is None:
+                self.phase1_max_steps = 20
+            if self.phase2_max_steps is None:
+                self.phase2_max_steps = 40
+            if self.phase3_max_steps is None:
+                self.phase3_max_steps = 100
+            if self.phase1_integrator_method is None:
+                self.phase1_integrator_method = "euler"
+            if self.phase2_integrator_method is None:
+                self.phase2_integrator_method = "euler"
+            if self.phase3_integrator_method is None:
+                self.phase3_integrator_method = "euler"
+            if self.diagnostics_every_epochs == 1:
+                self.diagnostics_every_epochs = 1
+            return
         raise ValueError(
             f"Unknown training_preset='{self.training_preset}'. "
-            "Supported values: None, 'fast_train_cpu'."
+            "Supported values: None, 'fast_train_cpu', 'ultra_fast_train_cpu'."
         )
 
     def _initialize_architecture(self, X, y):
@@ -237,6 +262,7 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
                     lambda_repulsion=self.lambda_repulsion,
                     rho_sigma_ratio=self.rho_sigma_ratio,
                     repulsion_mode=self.repulsion_mode,
+                    sigma_init_mode=self.sigma_init_mode,
                 ).to(self.device)
             else:
                 level = Level(
@@ -245,7 +271,8 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
                     n_classes=self.n_classes_,
                     n_attractors_per_class=self.n_attractors_per_class,
                     lambda_repulsion=self.lambda_repulsion,
-                    rho_sigma_ratio=self.rho_sigma_ratio
+                    rho_sigma_ratio=self.rho_sigma_ratio,
+                    sigma_init_mode=self.sigma_init_mode,
                 ).to(self.device)
             self.levels.append(level)
 
@@ -524,6 +551,8 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
             'gamma': self.gamma,
             'lambda_repulsion': self.lambda_repulsion,
             'rho_sigma_ratio': self.rho_sigma_ratio,
+            'sigma_init_mode': self.sigma_init_mode,
+            'learn_projections': self.learn_projections,
             'mu_sep': self.mu_sep,
             'mu_dyn': self.mu_dyn,
             'convergence_check_every': self.convergence_check_every,
