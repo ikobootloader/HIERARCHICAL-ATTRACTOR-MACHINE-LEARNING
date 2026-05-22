@@ -1,0 +1,89 @@
+{
+  "ablation": "b3",
+  "dataset": "fashion_mnist",
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "config": {
+    "n_train": 5000,
+    "n_test": 1000,
+    "n_epochs": 10,
+    "phase1_epochs": 3,
+    "phase2_epochs": 3,
+    "training_preset": "ultra_fast_train_cpu",
+    "batch_size": 128,
+    "device": "cpu"
+  },
+  "variants": {
+    "proj_fixed": {
+      "runs": [
+        {
+          "seed": 42,
+          "train_time_sec": 421.1966115000005,
+          "test_accuracy": 0.798,
+          "final_train_accuracy": 0.8216
+        },
+        {
+          "seed": 43,
+          "train_time_sec": 510.29708949999986,
+          "test_accuracy": 0.814,
+          "final_train_accuracy": 0.8284
+        },
+        {
+          "seed": 44,
+          "train_time_sec": 541.8487332000004,
+          "test_accuracy": 0.802,
+          "final_train_accuracy": 0.8186
+        }
+      ],
+      "summary": {
+        "n_runs": 3,
+        "train_time_sec_mean": 491.1141447333336,
+        "train_time_sec_std": 51.08961176285336,
+        "test_accuracy_mean": 0.8046666666666668,
+        "test_accuracy_std": 0.006798692684790335,
+        "final_train_accuracy_mean": 0.8228666666666666,
+        "final_train_accuracy_std": 0.004099864496405826
+      },
+      "overrides": {
+        "learn_projections": false
+      }
+    },
+    "proj_learned": {
+      "runs": [
+        {
+          "seed": 42,
+          "train_time_sec": 346.4955169999994,
+          "test_accuracy": 0.81,
+          "final_train_accuracy": 0.882
+        },
+        {
+          "seed": 43,
+          "train_time_sec": 343.70187460000034,
+          "test_accuracy": 0.823,
+          "final_train_accuracy": 0.892
+        },
+        {
+          "seed": 44,
+          "train_time_sec": 374.9175617000001,
+          "test_accuracy": 0.823,
+          "final_train_accuracy": 0.885
+        }
+      ],
+      "summary": {
+        "n_runs": 3,
+        "train_time_sec_mean": 355.0383177666666,
+        "train_time_sec_std": 14.102939740482007,
+        "test_accuracy_mean": 0.8186666666666667,
+        "test_accuracy_std": 0.006128258770283365,
+        "final_train_accuracy_mean": 0.8863333333333333,
+        "final_train_accuracy_std": 0.004189935029992182
+      },
+      "overrides": {
+        "learn_projections": true
+      }
+    }
+  }
+}

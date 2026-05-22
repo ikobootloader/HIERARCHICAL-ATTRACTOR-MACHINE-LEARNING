@@ -252,13 +252,14 @@ def run_probe(args):
 
     return {
         "resolved_device": str(model.device),
-        "effective_phase1_max_steps": model.phase1_max_steps,
-        "effective_phase2_max_steps": model.phase2_max_steps,
-        "effective_phase3_max_steps": model.phase3_max_steps,
-        "effective_phase1_integrator_method": model.phase1_integrator_method,
-        "effective_phase2_integrator_method": model.phase2_integrator_method,
-        "effective_phase3_integrator_method": model.phase3_integrator_method,
-        "effective_diagnostics_every_epochs": model.diagnostics_every_epochs,
+        "effective_phase1_max_steps": trainer.phase_config.phase1_max_steps,
+        "effective_phase2_max_steps": trainer.phase_config.phase2_max_steps,
+        "effective_phase3_max_steps": trainer.phase_config.phase3_max_steps,
+        "effective_phase1_integrator_method": trainer.phase_config.phase1_integrator_method,
+        "effective_phase2_integrator_method": trainer.phase_config.phase2_integrator_method,
+        "effective_phase3_integrator_method": trainer.phase_config.phase3_integrator_method,
+        "effective_diagnostics_every_epochs": int(trainer.phase_config.diagnostics_every_epochs),
+        "effective_diagnostics_subset_size": trainer.phase_config.diagnostics_subset_size,
         "train_time_sec": float(train_time_sec),
         "test_accuracy": float(test_acc),
         "final_train_accuracy": float(history["accuracy"][-1]) if history["accuracy"] else None,
@@ -324,7 +325,7 @@ def parse_args():
     parser.add_argument("--dataset", choices=["fashion_mnist", "make_moons"], default="make_moons")
     parser.add_argument("--noise", type=float, default=0.30, help="Noise used for make_moons dataset.")
     parser.add_argument("--mode", choices=["coupled_tuned", "independent"], default="coupled_tuned")
-    parser.add_argument("--training-preset", choices=["fast_train_cpu"], default=None)
+    parser.add_argument("--training-preset", choices=["fast_train_cpu", "ultra_fast_train_cpu"], default=None)
     parser.add_argument("--use-vectorized-levels", action="store_true")
     parser.add_argument("--repulsion-mode", choices=["global", "inter_class_only"], default="global")
     parser.add_argument("--n-train", type=int, default=1000)

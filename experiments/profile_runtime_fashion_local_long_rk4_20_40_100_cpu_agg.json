@@ -1,0 +1,43 @@
+{
+  "n_runs": 3,
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "resolved_devices": [
+    "cpu"
+  ],
+  "train_time_sec_mean": 1844.7246829666667,
+  "train_time_sec_std": 69.02027324572697,
+  "test_accuracy_mean": 0.8046666666666666,
+  "test_accuracy_std": 0.006798692684790335,
+  "final_train_accuracy_mean": 0.8229333333333333,
+  "final_train_accuracy_std": 0.004030991055421615,
+  "runs": [
+    {
+      "path": "experiments\\profile_runtime_fashion_local_long_rk4_20_40_100_cpu_seed42\\profile_summary.json",
+      "seed": 42,
+      "train_time_sec": 1901.386450599999,
+      "test_accuracy": 0.798,
+      "final_train_accuracy": 0.8216,
+      "resolved_device": "cpu"
+    },
+    {
+      "path": "experiments\\profile_runtime_fashion_local_long_rk4_20_40_100_cpu_seed43\\profile_summary.json",
+      "seed": 43,
+      "train_time_sec": 1885.2253344,
+      "test_accuracy": 0.814,
+      "final_train_accuracy": 0.8284,
+      "resolved_device": "cpu"
+    },
+    {
+      "path": "experiments\\profile_runtime_fashion_local_long_rk4_20_40_100_cpu_seed44\\profile_summary.json",
+      "seed": 44,
+      "train_time_sec": 1747.5622639000012,
+      "test_accuracy": 0.802,
+      "final_train_accuracy": 0.8188,
+      "resolved_device": "cpu"
+    }
+  ]
+}

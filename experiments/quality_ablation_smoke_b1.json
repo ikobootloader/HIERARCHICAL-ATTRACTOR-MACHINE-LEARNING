@@ -1,0 +1,63 @@
+{
+  "ablation": "b1",
+  "dataset": "make_moons",
+  "seeds": [
+    42
+  ],
+  "config": {
+    "n_train": 400,
+    "n_test": 120,
+    "n_epochs": 1,
+    "phase1_epochs": 1,
+    "phase2_epochs": 0,
+    "training_preset": "ultra_fast_train_cpu",
+    "batch_size": 128,
+    "device": "cpu"
+  },
+  "variants": {
+    "repulsion_global": {
+      "runs": [
+        {
+          "seed": 42,
+          "train_time_sec": 0.21486600000025646,
+          "test_accuracy": 0.8583333333333333,
+          "final_train_accuracy": 0.815
+        }
+      ],
+      "summary": {
+        "n_runs": 1,
+        "train_time_sec_mean": 0.21486600000025646,
+        "train_time_sec_std": 0.0,
+        "test_accuracy_mean": 0.8583333333333333,
+        "test_accuracy_std": 0.0,
+        "final_train_accuracy_mean": 0.815,
+        "final_train_accuracy_std": 0.0
+      },
+      "overrides": {
+        "repulsion_mode": "global"
+      }
+    },
+    "repulsion_inter_class_only": {
+      "runs": [
+        {
+          "seed": 42,
+          "train_time_sec": 0.3353368000007322,
+          "test_accuracy": 0.8583333333333333,
+          "final_train_accuracy": 0.815
+        }
+      ],
+      "summary": {
+        "n_runs": 1,
+        "train_time_sec_mean": 0.3353368000007322,
+        "train_time_sec_std": 0.0,
+        "test_accuracy_mean": 0.8583333333333333,
+        "test_accuracy_std": 0.0,
+        "final_train_accuracy_mean": 0.815,
+        "final_train_accuracy_std": 0.0
+      },
+      "overrides": {
+        "repulsion_mode": "inter_class_only"
+      }
+    }
+  }
+}

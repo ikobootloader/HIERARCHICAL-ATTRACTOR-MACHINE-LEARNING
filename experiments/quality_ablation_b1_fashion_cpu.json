@@ -1,0 +1,89 @@
+{
+  "ablation": "b1",
+  "dataset": "fashion_mnist",
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "config": {
+    "n_train": 5000,
+    "n_test": 1000,
+    "n_epochs": 10,
+    "phase1_epochs": 3,
+    "phase2_epochs": 3,
+    "training_preset": "ultra_fast_train_cpu",
+    "batch_size": 128,
+    "device": "cpu"
+  },
+  "variants": {
+    "repulsion_global": {
+      "runs": [
+        {
+          "seed": 42,
+          "train_time_sec": 767.5430700999999,
+          "test_accuracy": 0.798,
+          "final_train_accuracy": 0.8216
+        },
+        {
+          "seed": 43,
+          "train_time_sec": 1500.6328342999998,
+          "test_accuracy": 0.814,
+          "final_train_accuracy": 0.8284
+        },
+        {
+          "seed": 44,
+          "train_time_sec": 2184.3745419,
+          "test_accuracy": 0.802,
+          "final_train_accuracy": 0.8186
+        }
+      ],
+      "summary": {
+        "n_runs": 3,
+        "train_time_sec_mean": 1484.1834821,
+        "train_time_sec_std": 578.5359630202133,
+        "test_accuracy_mean": 0.8046666666666668,
+        "test_accuracy_std": 0.006798692684790335,
+        "final_train_accuracy_mean": 0.8228666666666666,
+        "final_train_accuracy_std": 0.004099864496405826
+      },
+      "overrides": {
+        "repulsion_mode": "global"
+      }
+    },
+    "repulsion_inter_class_only": {
+      "runs": [
+        {
+          "seed": 42,
+          "train_time_sec": 4714.5147663,
+          "test_accuracy": 0.798,
+          "final_train_accuracy": 0.8216
+        },
+        {
+          "seed": 43,
+          "train_time_sec": 3058.6264659000008,
+          "test_accuracy": 0.814,
+          "final_train_accuracy": 0.8284
+        },
+        {
+          "seed": 44,
+          "train_time_sec": 2201.7434660000017,
+          "test_accuracy": 0.802,
+          "final_train_accuracy": 0.8186
+        }
+      ],
+      "summary": {
+        "n_runs": 3,
+        "train_time_sec_mean": 3324.9615660666677,
+        "train_time_sec_std": 1042.9783286621785,
+        "test_accuracy_mean": 0.8046666666666668,
+        "test_accuracy_std": 0.006798692684790335,
+        "final_train_accuracy_mean": 0.8228666666666666,
+        "final_train_accuracy_std": 0.004099864496405826
+      },
+      "overrides": {
+        "repulsion_mode": "inter_class_only"
+      }
+    }
+  }
+}
