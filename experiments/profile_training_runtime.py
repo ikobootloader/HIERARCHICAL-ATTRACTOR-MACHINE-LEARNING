@@ -325,7 +325,16 @@ def parse_args():
     parser.add_argument("--dataset", choices=["fashion_mnist", "make_moons"], default="make_moons")
     parser.add_argument("--noise", type=float, default=0.30, help="Noise used for make_moons dataset.")
     parser.add_argument("--mode", choices=["coupled_tuned", "independent"], default="coupled_tuned")
-    parser.add_argument("--training-preset", choices=["fast_train_cpu", "ultra_fast_train_cpu"], default=None)
+    parser.add_argument(
+        "--training-preset",
+        choices=[
+            "fast_train_cpu",
+            "ultra_fast_train_cpu",
+            "fashion_cpu_accuracy",
+            "fashion_cpu_runtime",
+        ],
+        default=None,
+    )
     parser.add_argument("--use-vectorized-levels", action="store_true")
     parser.add_argument("--repulsion-mode", choices=["global", "inter_class_only"], default="global")
     parser.add_argument("--n-train", type=int, default=1000)

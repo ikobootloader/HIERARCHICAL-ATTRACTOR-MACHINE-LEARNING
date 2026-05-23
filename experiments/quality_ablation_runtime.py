@@ -54,6 +54,22 @@ def load_dataset(name, n_train, n_test, seed, noise):
     return X_train, X_test, y_train, y_test
 
 
+def build_model_overrides(args, variant_overrides):
+    """Compose model overrides with a frozen Fashion-MNIST CPU reference."""
+    resolved = {}
+    if args.dataset == "fashion_mnist" and str(args.device).lower() == "cpu":
+        # Reference config validated by B23:
+        # sigma_init_mode='sqrt_d_std' + learn_projections=True
+        resolved.update(
+            {
+                "sigma_init_mode": "sqrt_d_std",
+                "learn_projections": True,
+            }
+        )
+    resolved.update(variant_overrides)
+    return resolved
+
+
 def run_single(args, seed, overrides):
     set_seed(seed)
     X_train, X_test, y_train, y_test = load_dataset(
@@ -61,6 +77,8 @@ def run_single(args, seed, overrides):
     )
 
     level_dims = None if args.dataset == "fashion_mnist" else [2, 2]
+    model_overrides = build_model_overrides(args, overrides)
+
     model = HAML(
         n_levels=3,
         level_dims=level_dims,
@@ -76,7 +94,7 @@ def run_single(args, seed, overrides):
         batch_size=args.batch_size,
         train_on_fit=False,
         device=args.device,
-        **overrides,
+        **model_overrides,
     )
     model.fit(X_train, y_train)
 
@@ -129,6 +147,64 @@ def aggregate(rows):
     }
 
 
+def _atomic_write_json(path, payload):
+    path = pathlib.Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    tmp.replace(path)
+
+
+def _base_report(args):
+    return {
+        "ablation": args.ablation,
+        "dataset": args.dataset,
+        "seeds": args.seeds,
+        "config": {
+            "n_train": args.n_train,
+            "n_test": args.n_test,
+            "n_epochs": args.n_epochs,
+            "phase1_epochs": args.phase1_epochs,
+            "phase2_epochs": args.phase2_epochs,
+            "training_preset": args.training_preset,
+            "batch_size": args.batch_size,
+            "device": args.device,
+        },
+        "variants": {},
+    }
+
+
+def _load_resume_report(args, expected_variants):
+    out = pathlib.Path(args.out_json)
+    if (not args.resume) or (not out.exists()):
+        return _base_report(args)
+
+    try:
+        existing = json.loads(out.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise RuntimeError(f"Unable to read resume file '{out}': {exc}") from exc
+
+    expected = _base_report(args)
+    if (
+        existing.get("ablation") != expected["ablation"]
+        or existing.get("dataset") != expected["dataset"]
+        or existing.get("seeds") != expected["seeds"]
+        or existing.get("config") != expected["config"]
+    ):
+        raise RuntimeError(
+            "Resume file exists but command/config does not match. "
+            "Use a new --out-json file or run with --resume disabled."
+        )
+
+    variants = existing.get("variants", {})
+    for vname, _ in expected_variants:
+        if vname not in variants:
+            variants[vname] = {"runs": [], "summary": {}, "overrides": {}}
+        variants[vname]["runs"] = variants[vname].get("runs", [])
+    existing["variants"] = variants
+    return existing
+
+
 def build_variants(ablation):
     if ablation == "b1":
         return [
@@ -178,12 +254,26 @@ def parse_args():
     p.add_argument("--n-epochs", type=int, default=10)
     p.add_argument("--phase1-epochs", type=int, default=3)
     p.add_argument("--phase2-epochs", type=int, default=3)
-    p.add_argument("--training-preset", choices=["fast_train_cpu", "ultra_fast_train_cpu"], default="ultra_fast_train_cpu")
+    p.add_argument(
+        "--training-preset",
+        choices=[
+            "fast_train_cpu",
+            "ultra_fast_train_cpu",
+            "fashion_cpu_accuracy",
+            "fashion_cpu_runtime",
+        ],
+        default="ultra_fast_train_cpu",
+    )
     p.add_argument("--n-attractors-per-class", type=int, default=2)
     p.add_argument("--batch-size", type=int, default=128)
     p.add_argument("--convergence-check-every", type=int, default=5)
     p.add_argument("--lr", type=float, default=0.01)
     p.add_argument("--device", choices=["cpu", "cuda", "auto"], default="cpu")
+    p.add_argument(
+        "--resume",
+        action="store_true",
+        help="Resume from existing --out-json and only run missing seeds.",
+    )
     p.add_argument("--out-json", type=str, required=True)
     return p.parse_args()
 
@@ -191,32 +281,29 @@ def parse_args():
 def main():
     args = parse_args()
     variants = build_variants(args.ablation)
-    results = {}
+    report = _load_resume_report(args, variants)
     for name, overrides in variants:
-        rows = []
-        for seed in args.seeds:
-            rows.append(run_single(args, seed, overrides))
-        results[name] = {"runs": rows, "summary": aggregate(rows), "overrides": overrides}
+        variant = report["variants"].setdefault(
+            name, {"runs": [], "summary": {}, "overrides": overrides}
+        )
+        variant["overrides"] = overrides
+        existing_runs = variant.get("runs", [])
+        done_seeds = {int(r["seed"]) for r in existing_runs}
 
-    report = {
-        "ablation": args.ablation,
-        "dataset": args.dataset,
-        "seeds": args.seeds,
-        "config": {
-            "n_train": args.n_train,
-            "n_test": args.n_test,
-            "n_epochs": args.n_epochs,
-            "phase1_epochs": args.phase1_epochs,
-            "phase2_epochs": args.phase2_epochs,
-            "training_preset": args.training_preset,
-            "batch_size": args.batch_size,
-            "device": args.device,
-        },
-        "variants": results,
-    }
-    out = pathlib.Path(args.out_json)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(report, indent=2), encoding="utf-8")
+        for seed in args.seeds:
+            if int(seed) in done_seeds:
+                continue
+            row = run_single(args, seed, overrides)
+            existing_runs.append(row)
+            done_seeds.add(int(seed))
+            variant["runs"] = sorted(existing_runs, key=lambda r: int(r["seed"]))
+            variant["summary"] = aggregate(variant["runs"])
+            _atomic_write_json(args.out_json, report)
+
+        variant["runs"] = sorted(existing_runs, key=lambda r: int(r["seed"]))
+        variant["summary"] = aggregate(variant["runs"])
+
+    _atomic_write_json(args.out_json, report)
     print(json.dumps(report, indent=2))
 
 
