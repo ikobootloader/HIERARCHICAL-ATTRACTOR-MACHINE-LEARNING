@@ -210,3 +210,31 @@ def test_haml_exposes_sigma_init_mode_param():
     model = HAML(sigma_init_mode="median_pairwise")
     params = model.get_params()
     assert params["sigma_init_mode"] == "median_pairwise"
+
+
+def test_haml_fashion_cpu_accuracy_preset_applies_defaults():
+    model = HAML(training_preset="fashion_cpu_accuracy")
+    params = model.get_params()
+    assert params["training_preset"] == "fashion_cpu_accuracy"
+    assert params["sigma_init_mode"] == "median_pairwise"
+    assert params["learn_projections"] is True
+    assert params["phase1_max_steps"] == 20
+    assert params["phase2_max_steps"] == 40
+    assert params["phase3_max_steps"] == 100
+    assert params["phase1_integrator_method"] == "euler"
+    assert params["phase2_integrator_method"] == "euler"
+    assert params["phase3_integrator_method"] == "euler"
+
+
+def test_haml_fashion_cpu_runtime_preset_applies_defaults():
+    model = HAML(training_preset="fashion_cpu_runtime")
+    params = model.get_params()
+    assert params["training_preset"] == "fashion_cpu_runtime"
+    assert params["sigma_init_mode"] == "sqrt_d_std"
+    assert params["learn_projections"] is True
+    assert params["phase1_max_steps"] == 20
+    assert params["phase2_max_steps"] == 40
+    assert params["phase3_max_steps"] == 100
+    assert params["phase1_integrator_method"] == "euler"
+    assert params["phase2_integrator_method"] == "euler"
+    assert params["phase3_integrator_method"] == "euler"
