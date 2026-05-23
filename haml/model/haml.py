@@ -206,9 +206,48 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
             if self.diagnostics_every_epochs == 1:
                 self.diagnostics_every_epochs = 1
             return
+        if preset == "fashion_cpu_accuracy":
+            self.sigma_init_mode = "median_pairwise"
+            if self.learn_projections is None:
+                self.learn_projections = True
+            if self.phase1_max_steps is None:
+                self.phase1_max_steps = 20
+            if self.phase2_max_steps is None:
+                self.phase2_max_steps = 40
+            if self.phase3_max_steps is None:
+                self.phase3_max_steps = 100
+            if self.phase1_integrator_method is None:
+                self.phase1_integrator_method = "euler"
+            if self.phase2_integrator_method is None:
+                self.phase2_integrator_method = "euler"
+            if self.phase3_integrator_method is None:
+                self.phase3_integrator_method = "euler"
+            if self.diagnostics_every_epochs == 1:
+                self.diagnostics_every_epochs = 1
+            return
+        if preset == "fashion_cpu_runtime":
+            self.sigma_init_mode = "sqrt_d_std"
+            if self.learn_projections is None:
+                self.learn_projections = True
+            if self.phase1_max_steps is None:
+                self.phase1_max_steps = 20
+            if self.phase2_max_steps is None:
+                self.phase2_max_steps = 40
+            if self.phase3_max_steps is None:
+                self.phase3_max_steps = 100
+            if self.phase1_integrator_method is None:
+                self.phase1_integrator_method = "euler"
+            if self.phase2_integrator_method is None:
+                self.phase2_integrator_method = "euler"
+            if self.phase3_integrator_method is None:
+                self.phase3_integrator_method = "euler"
+            if self.diagnostics_every_epochs == 1:
+                self.diagnostics_every_epochs = 1
+            return
         raise ValueError(
             f"Unknown training_preset='{self.training_preset}'. "
-            "Supported values: None, 'fast_train_cpu', 'ultra_fast_train_cpu'."
+            "Supported values: None, 'fast_train_cpu', 'ultra_fast_train_cpu', "
+            "'fashion_cpu_accuracy', 'fashion_cpu_runtime'."
         )
 
     def _initialize_architecture(self, X, y):
