@@ -249,6 +249,21 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
     - gain accuracy `+1.4 points`,
     - gain runtime `~27.7%` (`~1.38x`),
     - `learn_projections=True` recommandé sur ce protocole.
+- Validation robuste B3 complétée (Fashion-MNIST, CPU, seeds `42..51`, preset `ultra_fast_train_cpu`) :
+  - fichier : `experiments/quality_ablation_b3_fashion_cpu_seeds42_51.json`
+  - `learn_projections=False` :
+    - `train_time_mean=539.45s` (`std=53.72s`)
+    - `test_acc_mean=0.8003` (`std=0.0103`)
+  - `learn_projections=True` :
+    - `train_time_mean=373.31s` (`std=33.31s`)
+    - `test_acc_mean=0.8144` (`std=0.0103`)
+  - deltas (`True` vs `False`) :
+    - `test_acc`: `+1.41 points`
+    - `train_time`: `-166.14s` (`~30.8%`, `~1.45x`)
+    - `final_train_acc`: `+7.53 points`
+  - conclusion :
+    - le signal B3 est confirmé sur `10` seeds,
+    - `learn_projections=True` est consolidé comme choix opérationnel robuste.
 - Campagne B23 complétée (Fashion-MNIST, CPU, seeds `42..44`, preset `ultra_fast_train_cpu`) :
   - fichier : `experiments/quality_ablation_b23_fashion_cpu.json`
   - `sigma_sqrt_d_std + learn_projections=False` :
@@ -269,17 +284,71 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
       `median_pairwise` en accuracy et runtime,
     - recommandation opérationnelle consolidée :
       `sigma_init_mode='sqrt_d_std'` + `learn_projections=True`.
+- Validation robuste B23 complétée (Fashion-MNIST, CPU, seeds `42..51`, preset `ultra_fast_train_cpu`) :
+  - fichier : `experiments/quality_ablation_b23_fashion_cpu_seeds42_51.json`
+  - `sigma_sqrt_d_std + learn_projections=False` :
+    - `train_time_mean=560.15s` (`std=56.13s`)
+    - `test_acc_mean=0.8003`
+  - `sigma_median_pairwise + learn_projections=False` :
+    - `train_time_mean=521.46s` (`std=22.22s`)
+    - `test_acc_mean=0.8016`
+  - `sigma_sqrt_d_std + learn_projections=True` :
+    - `train_time_mean=382.40s` (`std=42.53s`)
+    - `test_acc_mean=0.8130`
+  - `sigma_median_pairwise + learn_projections=True` :
+    - `train_time_mean=399.17s` (`std=15.76s`)
+    - `test_acc_mean=0.8189`
+  - conclusion :
+    - `learn_projections=True` confirmé comme levier principal,
+    - avec projections apprises, `median_pairwise` dépasse `sqrt_d_std`
+      en accuracy (`+0.59 point`) au prix d'un surcoût runtime (`+16.76s`,
+      `~4.4%`),
+    - recommandation désormais bifurquée selon objectif :
+      accuracy max (`median_pairwise+learned`) vs runtime max (`sqrt_d_std+learned`).
 - Défaut opérationnel presets runtime ajusté :
   - `training_preset=fast_train_cpu` et `training_preset=ultra_fast_train_cpu`
     activent désormais `learn_projections=True` quand le paramètre n'est pas
     explicitement fourni.
   - un override explicite `learn_projections=False` reste prioritaire.
+- Ajout de presets explicites orientés Fashion-MNIST CPU :
+  - `training_preset='fashion_cpu_accuracy'` :
+    - `sigma_init_mode='median_pairwise'`,
+    - `learn_projections=True` (si non explicitement fourni),
+    - scheduler runtime `20/40/100` + `euler/euler/euler`.
+  - `training_preset='fashion_cpu_runtime'` :
+    - `sigma_init_mode='sqrt_d_std'`,
+    - `learn_projections=True` (si non explicitement fourni),
+    - scheduler runtime `20/40/100` + `euler/euler/euler`.
+  - objectif : rendre explicite le choix "accuracy max" vs "runtime max"
+    sans dépendre d'overrides manuels.
+- CLI harmonisée :
+  - `experiments/quality_ablation_runtime.py` et
+    `experiments/profile_training_runtime.py` acceptent désormais aussi
+    `fashion_cpu_accuracy` et `fashion_cpu_runtime` dans `--training-preset`.
+- Runner d'ablation qualité figé sur la référence Fashion-MNIST CPU :
+  - dans `experiments/quality_ablation_runtime.py`, la config de base impose
+    désormais `sigma_init_mode='sqrt_d_std'` et `learn_projections=True`
+    pour `dataset=fashion_mnist` + `device=cpu`.
+  - les variantes d'ablation conservent la priorité via leurs overrides.
+- Runner d'ablation qualité : reprise incrémentale ajoutée
+  (`experiments/quality_ablation_runtime.py`) :
+  - nouveau flag CLI `--resume`,
+  - reprise d'un run à partir de `--out-json` existant si la config est
+    strictement identique,
+  - exécution des seuls seeds manquants, sans recalcul des seeds déjà présents,
+  - sauvegarde JSON incrémentale et atomique après chaque seed.
 - Test de non-régression ajouté :
   - `tests/test_refactor_invariants.py::test_haml_exposes_phase_runtime_knobs_in_get_params`.
   - `tests/test_refactor_invariants.py::test_haml_fast_train_cpu_preset_applies_defaults`.
   - `tests/test_refactor_invariants.py::test_haml_fast_train_cpu_preset_respects_explicit_overrides`.
   - `tests/test_refactor_invariants.py::test_haml_ultra_fast_train_cpu_preset_applies_defaults`.
   - `tests/test_refactor_invariants.py::test_haml_training_preset_respects_explicit_learn_projections_override`.
+  - `tests/test_quality_ablation_runtime_config.py` (résolution effective
+    des overrides de référence vs variantes).
+  - `tests/test_quality_ablation_runtime_resume.py` (validation reprise/mismatch).
+  - `tests/test_refactor_invariants.py` :
+    - `test_haml_fashion_cpu_accuracy_preset_applies_defaults`
+    - `test_haml_fashion_cpu_runtime_preset_applies_defaults`.
 
 ### Modifié - 2026-05-17
 - Campagne F (Fashion-MNIST) complétée avec comparaison `coupled_tuned` vs `independent` sur seeds `42..46` :
