@@ -1,8 +1,9 @@
-"""Ablation runner for model-quality levers B1/B2/B3/B23.
+"""Ablation runner for model-quality levers B1/B2/B3/B5/B23.
 
 B1: repulsion_mode (global vs inter_class_only)
 B2: sigma_init_mode (sqrt_d_std vs median_pairwise)
 B3: learn_projections (False vs True)
+B5: level_score_weighting (exponential vs uniform)
 B23: sigma_init_mode x learn_projections (2x2)
 """
 
@@ -221,6 +222,11 @@ def build_variants(ablation):
             ("proj_fixed", {"learn_projections": False}),
             ("proj_learned", {"learn_projections": True}),
         ]
+    if ablation == "b5":
+        return [
+            ("level_weight_exponential", {"level_score_weighting": "exponential"}),
+            ("level_weight_uniform", {"level_score_weighting": "uniform"}),
+        ]
     if ablation == "b23":
         return [
             (
@@ -244,8 +250,8 @@ def build_variants(ablation):
 
 
 def parse_args():
-    p = argparse.ArgumentParser(description="Run B1/B2/B3/B23 ablations with consistent protocol.")
-    p.add_argument("--ablation", choices=["b1", "b2", "b3", "b23"], required=True)
+    p = argparse.ArgumentParser(description="Run B1/B2/B3/B5/B23 ablations with consistent protocol.")
+    p.add_argument("--ablation", choices=["b1", "b2", "b3", "b5", "b23"], required=True)
     p.add_argument("--dataset", choices=["fashion_mnist", "make_moons"], default="fashion_mnist")
     p.add_argument("--noise", type=float, default=0.30)
     p.add_argument("--seeds", type=int, nargs="+", default=[42, 43, 44])

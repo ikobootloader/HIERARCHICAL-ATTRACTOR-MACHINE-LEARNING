@@ -1,0 +1,63 @@
+{
+  "ablation": "b5",
+  "dataset": "make_moons",
+  "seeds": [
+    42
+  ],
+  "config": {
+    "n_train": 300,
+    "n_test": 120,
+    "n_epochs": 1,
+    "phase1_epochs": 1,
+    "phase2_epochs": 1,
+    "training_preset": "fashion_cpu_accuracy",
+    "batch_size": 128,
+    "device": "cpu"
+  },
+  "variants": {
+    "level_weight_exponential": {
+      "runs": [
+        {
+          "seed": 42,
+          "train_time_sec": 0.3072345000000496,
+          "test_accuracy": 0.7583333333333333,
+          "final_train_accuracy": 0.8666666666666667
+        }
+      ],
+      "summary": {
+        "n_runs": 1,
+        "train_time_sec_mean": 0.3072345000000496,
+        "train_time_sec_std": 0.0,
+        "test_accuracy_mean": 0.7583333333333333,
+        "test_accuracy_std": 0.0,
+        "final_train_accuracy_mean": 0.8666666666666667,
+        "final_train_accuracy_std": 0.0
+      },
+      "overrides": {
+        "level_score_weighting": "exponential"
+      }
+    },
+    "level_weight_uniform": {
+      "runs": [
+        {
+          "seed": 42,
+          "train_time_sec": 0.24054069999988315,
+          "test_accuracy": 0.7583333333333333,
+          "final_train_accuracy": 0.8666666666666667
+        }
+      ],
+      "summary": {
+        "n_runs": 1,
+        "train_time_sec_mean": 0.24054069999988315,
+        "train_time_sec_std": 0.0,
+        "test_accuracy_mean": 0.7583333333333333,
+        "test_accuracy_std": 0.0,
+        "final_train_accuracy_mean": 0.8666666666666667,
+        "final_train_accuracy_std": 0.0
+      },
+      "overrides": {
+        "level_score_weighting": "uniform"
+      }
+    }
+  }
+}
