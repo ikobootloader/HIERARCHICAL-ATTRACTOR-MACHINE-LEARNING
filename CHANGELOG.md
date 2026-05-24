@@ -198,6 +198,7 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
     - `B1`: `repulsion_mode global vs inter_class_only`
     - `B2`: `sigma_init_mode sqrt_d_std vs median_pairwise`
     - `B3`: `learn_projections False vs True`
+    - `B5`: `level_score_weighting exponential vs uniform`
     - `B23`: croisement `sigma_init_mode x learn_projections` (2x2)
   - sortie JSON agrégée (moyenne/écart-type + détail par seed).
 - Extension modèle pour B2 :
@@ -213,6 +214,9 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 - Smoke test runner ablation combinée validé :
   - `quality_ablation_runtime.py --ablation b23 --dataset make_moons ...`
   - JSON produit : `experiments/quality_ablation_smoke_b23.json`.
+- Smoke test runner ablation B5 validé :
+  - `quality_ablation_runtime.py --ablation b5 --dataset make_moons ...`
+  - JSON produit : `experiments/quality_ablation_smoke_b5.json`.
 - Campagne B1 complétée (Fashion-MNIST, CPU, seeds `42..44`, preset `ultra_fast_train_cpu`) :
   - fichier : `experiments/quality_ablation_b1_fashion_cpu.json`
   - `repulsion_global` :
@@ -305,6 +309,30 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
       `~4.4%`),
     - recommandation désormais bifurquée selon objectif :
       accuracy max (`median_pairwise+learned`) vs runtime max (`sqrt_d_std+learned`).
+- Validation preset `fashion_cpu_accuracy` (Fashion-MNIST, CPU, seeds `42..51`) :
+  - fichier : `experiments/quality_ablation_b23_fashion_cpu_seeds42_51_accuracy_preset.json`
+  - meilleur variant observé :
+    - `sigma_median_pairwise + learn_projections=True`
+    - `test_acc_mean=0.8191` (`std=0.0081`)
+    - `train_time_mean=378.41s` (`std=25.21s`)
+  - comparaison clé dans ce run :
+    - `sigma_sqrt_d_std + learn_projections=True` :
+      `test_acc_mean=0.8188`, `train_time_mean=406.52s`
+  - conclusion :
+    - le preset `fashion_cpu_accuracy` est validé multi-seeds,
+    - `median_pairwise+learned` y domine en accuracy et en runtime.
+- Validation preset `fashion_cpu_runtime` (Fashion-MNIST, CPU, seeds `42..51`) :
+  - fichier : `experiments/quality_ablation_b23_fashion_cpu_seeds42_51_runtime_preset.json`
+  - meilleur variant observé :
+    - `sigma_sqrt_d_std + learn_projections=True`
+    - `test_acc_mean=0.8146` (`std=0.0107`)
+    - `train_time_mean=366.09s` (`std=45.33s`)
+  - comparaison vs preset `fashion_cpu_accuracy` (meilleur variant) :
+    - temps : `-12.32s` (`~3.3%`) pour `fashion_cpu_runtime`
+    - accuracy : `-0.45 point` pour `fashion_cpu_runtime`
+  - décision :
+    - `fashion_cpu_accuracy` reste le preset accuracy-first,
+    - `fashion_cpu_runtime` devient le preset speed-first.
 - Défaut opérationnel presets runtime ajusté :
   - `training_preset=fast_train_cpu` et `training_preset=ultra_fast_train_cpu`
     activent désormais `learn_projections=True` quand le paramètre n'est pas
@@ -325,6 +353,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
   - `experiments/quality_ablation_runtime.py` et
     `experiments/profile_training_runtime.py` acceptent désormais aussi
     `fashion_cpu_accuracy` et `fashion_cpu_runtime` dans `--training-preset`.
+  - `experiments/quality_ablation_runtime.py` supporte désormais aussi
+    `--ablation b5`.
 - Runner d'ablation qualité figé sur la référence Fashion-MNIST CPU :
   - dans `experiments/quality_ablation_runtime.py`, la config de base impose
     désormais `sigma_init_mode='sqrt_d_std'` et `learn_projections=True`
@@ -346,6 +376,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
   - `tests/test_quality_ablation_runtime_config.py` (résolution effective
     des overrides de référence vs variantes).
   - `tests/test_quality_ablation_runtime_resume.py` (validation reprise/mismatch).
+  - `tests/test_quality_ablation_runtime_variants.py`
+    (`build_variants` couvre bien B5).
   - `tests/test_refactor_invariants.py` :
     - `test_haml_fashion_cpu_accuracy_preset_applies_defaults`
     - `test_haml_fashion_cpu_runtime_preset_applies_defaults`.

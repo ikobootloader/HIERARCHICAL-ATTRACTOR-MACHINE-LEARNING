@@ -395,7 +395,7 @@ Outil d'agrégation des campagnes runtime :
   - `experiments/profile_runtime_fashion_local_long_fastpreset_cpu_agg.json`
   - `experiments/profile_runtime_fashion_local_long_ultra_fastpreset_cpu_agg.json`
 
-Ablations qualité/modèle (B1/B2/B3/B23) :
+Ablations qualité/modèle (B1/B2/B3/B5/B23) :
 - script dédié : `experiments/quality_ablation_runtime.py`
 - référence figée pour campagnes Fashion-MNIST CPU dans ce runner :
   - `sigma_init_mode='sqrt_d_std'`
@@ -406,11 +406,13 @@ Ablations qualité/modèle (B1/B2/B3/B23) :
   - `--ablation b1` : `repulsion_mode=global` vs `inter_class_only`
   - `--ablation b2` : `sigma_init_mode=sqrt_d_std` vs `median_pairwise`
   - `--ablation b3` : `learn_projections=False` vs `True`
+  - `--ablation b5` : `level_score_weighting=exponential` vs `uniform`
   - `--ablation b23` : croisement `sigma_init_mode` x `learn_projections` (2x2)
 - protocole recommandé (Fashion-MNIST CPU, seeds `42 43 44`) :
   - `python experiments/quality_ablation_runtime.py --ablation b1 --dataset fashion_mnist --seeds 42 43 44 --n-train 5000 --n-test 1000 --n-epochs 10 --phase1-epochs 3 --phase2-epochs 3 --training-preset ultra_fast_train_cpu --device cpu --out-json experiments/quality_ablation_b1_fashion_cpu.json`
   - `python experiments/quality_ablation_runtime.py --ablation b2 --dataset fashion_mnist --seeds 42 43 44 --n-train 5000 --n-test 1000 --n-epochs 10 --phase1-epochs 3 --phase2-epochs 3 --training-preset ultra_fast_train_cpu --device cpu --out-json experiments/quality_ablation_b2_fashion_cpu.json`
   - `python experiments/quality_ablation_runtime.py --ablation b3 --dataset fashion_mnist --seeds 42 43 44 --n-train 5000 --n-test 1000 --n-epochs 10 --phase1-epochs 3 --phase2-epochs 3 --training-preset ultra_fast_train_cpu --device cpu --out-json experiments/quality_ablation_b3_fashion_cpu.json`
+  - `python experiments/quality_ablation_runtime.py --ablation b5 --dataset fashion_mnist --seeds 42 43 44 --n-train 5000 --n-test 1000 --n-epochs 10 --phase1-epochs 3 --phase2-epochs 3 --training-preset fashion_cpu_accuracy --device cpu --out-json experiments/quality_ablation_b5_fashion_cpu.json`
   - `python experiments/quality_ablation_runtime.py --ablation b23 --dataset fashion_mnist --seeds 42 43 44 --n-train 5000 --n-test 1000 --n-epochs 10 --phase1-epochs 3 --phase2-epochs 3 --training-preset ultra_fast_train_cpu --device cpu --out-json experiments/quality_ablation_b23_fashion_cpu.json`
 - reprise/continuité de run (sans recalcul des seeds déjà terminés) :
   - ajouter `--resume` avec le même `--out-json` et la même config CLI.
@@ -514,6 +516,34 @@ Validation robuste B23 (Fashion-MNIST, CPU, seeds `42..51`, `ultra_fast_train_cp
   - choix opérationnel selon objectif :
     - accuracy max : `sigma_init_mode='median_pairwise'` + `learn_projections=True`
     - runtime max : `sigma_init_mode='sqrt_d_std'` + `learn_projections=True`.
+
+Validation preset `fashion_cpu_accuracy` (Fashion-MNIST, CPU, seeds `42..51`) :
+- run : `experiments/quality_ablation_b23_fashion_cpu_seeds42_51_accuracy_preset.json`
+- meilleur compromis observé :
+  - `sigma_median_pairwise + learn_projections=True`
+  - `test_accuracy_mean=0.8191` (`std=0.0081`)
+  - `train_time_mean=378.41s` (`std=25.21s`)
+- lecture :
+  - `learn_projections=True` reste le levier principal,
+  - sur cette campagne, `median_pairwise+learned` domine aussi `sqrt_d_std+learned`
+    en runtime (`378.41s` vs `406.52s`) avec une accuracy légèrement supérieure
+    (`0.8191` vs `0.8188`).
+
+Validation preset `fashion_cpu_runtime` (Fashion-MNIST, CPU, seeds `42..51`) :
+- run : `experiments/quality_ablation_b23_fashion_cpu_seeds42_51_runtime_preset.json`
+- meilleur compromis observé :
+  - `sigma_sqrt_d_std + learn_projections=True`
+  - `test_accuracy_mean=0.8146` (`std=0.0107`)
+  - `train_time_mean=366.09s` (`std=45.33s`)
+- comparaison directe vs preset `fashion_cpu_accuracy` (meilleur variant) :
+  - `fashion_cpu_runtime` : `366.09s`, `0.8146`
+  - `fashion_cpu_accuracy` : `378.41s`, `0.8191`
+  - delta (`runtime` vs `accuracy`) :
+    - temps : `-12.32s` (`~3.3%`)
+    - accuracy : `-0.45 point`
+- décision opérationnelle :
+  - priorité accuracy : `fashion_cpu_accuracy`
+  - priorité runtime strict : `fashion_cpu_runtime`.
 
 ### Campagne A - MNIST subset (1500/500, 5 epochs)
 
