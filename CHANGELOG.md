@@ -333,6 +333,20 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
   - décision :
     - `fashion_cpu_accuracy` reste le preset accuracy-first,
     - `fashion_cpu_runtime` devient le preset speed-first.
+- Validation B5 complétée (Fashion-MNIST, CPU, seeds `42..51`,
+  preset `fashion_cpu_accuracy`) :
+  - fichier : `experiments/quality_ablation_b5_fashion_cpu_seeds42_51_accuracy_preset.json`
+  - `level_score_weighting='exponential'` :
+    - `train_time_mean=359.04s` (`std=24.46s`)
+    - `test_acc_mean=0.8206` (`std=0.0079`)
+  - `level_score_weighting='uniform'` :
+    - `train_time_mean=349.63s` (`std=18.03s`)
+    - `test_acc_mean=0.7547` (`std=0.0447`)
+  - conclusion :
+    - `uniform` perd `-6.59 points` d'accuracy moyenne,
+    - variance test fortement dégradée avec `uniform`,
+    - gain temps marginal (`~2.6%`) non pertinent face à la perte qualité,
+    - `exponential` confirmé comme défaut opérationnel.
 - Défaut opérationnel presets runtime ajusté :
   - `training_preset=fast_train_cpu` et `training_preset=ultra_fast_train_cpu`
     activent désormais `learn_projections=True` quand le paramètre n'est pas

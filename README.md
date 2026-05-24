@@ -545,6 +545,20 @@ Validation preset `fashion_cpu_runtime` (Fashion-MNIST, CPU, seeds `42..51`) :
   - priorité accuracy : `fashion_cpu_accuracy`
   - priorité runtime strict : `fashion_cpu_runtime`.
 
+Validation B5 (pondération inter-niveaux, Fashion-MNIST, CPU, seeds `42..51`,
+preset `fashion_cpu_accuracy`) :
+- `level_score_weighting='exponential'` :
+  - `train_time_mean=359.04s` (`std=24.46s`)
+  - `test_accuracy_mean=0.8206` (`std=0.0079`)
+- `level_score_weighting='uniform'` :
+  - `train_time_mean=349.63s` (`std=18.03s`)
+  - `test_accuracy_mean=0.7547` (`std=0.0447`)
+- conclusion B5 :
+  - `uniform` perd `-6.59 points` d'accuracy moyenne vs `exponential`,
+  - `uniform` est nettement moins stable (écart-type test fortement accru),
+  - le léger gain temps (`~2.6%`) ne compense pas la régression qualité,
+  - `exponential` est confirmé comme défaut opérationnel.
+
 ### Campagne A - MNIST subset (1500/500, 5 epochs)
 
 Objectif :
