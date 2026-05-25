@@ -1,7 +1,7 @@
-"""
+﻿"""
 Module HAML principal.
 
-Orchestrateur du système hiérarchique d'attracteurs.
+Orchestrateur du systÃ¨me hiÃ©rarchique d'attracteurs.
 Interface compatible scikit-learn (fit/predict).
 """
 
@@ -40,14 +40,14 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
     """
     Hierarchical Attractor Machine Learning.
 
-    Système de classification basé sur une dynamique hiérarchique bidirectionnelle
-    où la prédiction émerge de la convergence vers un bassin d'attraction stable.
+    SystÃ¨me de classification basÃ© sur une dynamique hiÃ©rarchique bidirectionnelle
+    oÃ¹ la prÃ©diction Ã©merge de la convergence vers un bassin d'attraction stable.
 
     Architecture :
-        X = H_0 → H_1 → ... → H_L (projections PCA)
-        Attracteurs {μ_{c,m}^(l)} à chaque niveau
+        X = H_0 â†’ H_1 â†’ ... â†’ H_L (projections PCA)
+        Attracteurs {Î¼_{c,m}^(l)} Ã  chaque niveau
         Couplage bidirectionnel (bottom-up + top-down)
-        Intégration ODE jusqu'à régime stationnaire
+        IntÃ©gration ODE jusqu'Ã  rÃ©gime stationnaire
     """
 
     def __init__(
@@ -96,18 +96,18 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
             alpha_bu (float): Coefficient bottom-up
             alpha_td (float): Coefficient top-down
             gamma (float): Amortissement
-            lambda_repulsion (float): Ratio attraction/répulsion λ
+            lambda_repulsion (float): Ratio attraction/rÃ©pulsion Î»
             rho_sigma_ratio (float): Ratio d'initialisation rho/sigma (>1.0)
             mu_sep (float): Poids L_sep
             mu_dyn (float): Poids L_dyn
             integrator_method (str): 'euler', 'rk4', ou 'adjoint'
             dt (float): Pas de temps
-            max_steps (int): Max itérations ODE
-            tol (float): Tolérance convergence
+            max_steps (int): Max itÃ©rations ODE
+            tol (float): TolÃ©rance convergence
             learn_projections (bool | None): Affiner projections PCA.
-                Si None, peut être décidé par le preset d'entraînement.
-            learn_alphas (bool): Apprendre α_bu, α_td
-            level_score_weighting (str): 'uniform' ou 'exponential'
+                Si None, peut Ãªtre dÃ©cidÃ© par le preset d'entraÃ®nement.
+            learn_alphas (bool): Apprendre Î±_bu, Î±_td
+            level_score_weighting (str): 'uniform', 'exponential' ou 'learned_softmax'
             device (str): 'auto', 'cpu' ou 'cuda'
         """
         super().__init__()
@@ -117,7 +117,7 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
         self.n_attractors_per_class = n_attractors_per_class
         self.device = _resolve_device(device)
 
-        # Hyperparamètres stockés (pour scikit-learn)
+        # HyperparamÃ¨tres stockÃ©s (pour scikit-learn)
         self.alpha_bu = alpha_bu
         self.alpha_td = alpha_td
         self.gamma = gamma
@@ -149,11 +149,12 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
         self.level_score_weighting = level_score_weighting
         self.use_vectorized_levels = use_vectorized_levels
         self.repulsion_mode = repulsion_mode
+        self.level_weight_logits = nn.Parameter(torch.zeros(self.n_levels))
         self._apply_training_preset()
         if self.learn_projections is None:
             self.learn_projections = False
 
-        # Modules (initialisés dans fit)
+        # Modules (initialisÃ©s dans fit)
         self.scaler = StandardScaler()
         self.spaces = None
         self.levels = None
@@ -252,19 +253,19 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
 
     def _initialize_architecture(self, X, y):
         """
-        Initialise la hiérarchie après avoir vu les données.
+        Initialise la hiÃ©rarchie aprÃ¨s avoir vu les donnÃ©es.
 
         Args:
-            X (np.ndarray): Données (n_samples, n_features)
+            X (np.ndarray): DonnÃ©es (n_samples, n_features)
             y (np.ndarray): Labels (n_samples,)
         """
         n_samples, input_dim = X.shape
         self.n_classes_ = len(np.unique(y))
         self.classes_ = np.unique(y)
 
-        # Dimensions par niveau (auto si non spécifié)
+        # Dimensions par niveau (auto si non spÃ©cifiÃ©)
         if self.level_dims is None:
-            # Décroissance géométrique
+            # DÃ©croissance gÃ©omÃ©trique
             dims = []
             d = input_dim
             for l in range(1, self.n_levels):
@@ -287,7 +288,7 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
         X_torch = torch.from_numpy(X).float().to(self.device)
         self.spaces.fit_pca(X_torch)
 
-        # 2. Niveaux hiérarchiques
+        # 2. Niveaux hiÃ©rarchiques
         all_dims = [input_dim] + self.level_dims
         self.levels = nn.ModuleList()
 
@@ -330,7 +331,7 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
             learn_alphas=self.learn_alphas
         ).to(self.device)
 
-        # 4. Intégrateur ODE
+        # 4. IntÃ©grateur ODE
         self.integrator = ODEIntegrator(
             levels=list(self.levels),
             coupling=self.coupling,
@@ -350,10 +351,10 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
 
     def fit(self, X, y):
         """
-        Entraîne le modèle HAML.
+        EntraÃ®ne le modÃ¨le HAML.
 
         Args:
-            X (np.ndarray): Données (n_samples, n_features)
+            X (np.ndarray): DonnÃ©es (n_samples, n_features)
             y (np.ndarray): Labels (n_samples,)
 
         Returns:
@@ -368,12 +369,12 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
         print(f"HAML initialized: {self.n_levels} levels, {self.n_attractors_per_class} attractors/class")
         print(f"Coupling: alpha_bu={self.alpha_bu:.2f}, alpha_td={self.alpha_td:.2f}")
 
-        # Vérification conditions
+        # VÃ©rification conditions
         self.coupling.verify_coupling_condition_C2(self.levels)
 
         self.is_fitted_ = True
 
-        # Entraînement optionnel
+        # EntraÃ®nement optionnel
         if self.train_on_fit and self.n_epochs > 0:
             print("\nStarting gradient training...")
             self.train_model(X, y)
@@ -382,27 +383,27 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
 
     def train_model(self, X_train, y_train, X_val=None, y_val=None):
         """
-        Entraîne le modèle par gradient descent avec stratégie 3 phases.
+        EntraÃ®ne le modÃ¨le par gradient descent avec stratÃ©gie 3 phases.
 
         Args:
-            X_train (np.ndarray): Données d'entraînement (normalisées)
+            X_train (np.ndarray): DonnÃ©es d'entraÃ®nement (normalisÃ©es)
             y_train (np.ndarray): Labels
-            X_val (np.ndarray, optional): Données de validation
+            X_val (np.ndarray, optional): DonnÃ©es de validation
             y_val (np.ndarray, optional): Labels de validation
 
         Returns:
-            dict: Historique d'entraînement
+            dict: Historique d'entraÃ®nement
         """
         if not self.is_fitted_:
             raise RuntimeError("Model not initialized. Call fit() first.")
 
-        # Créer optimiseur
+        # CrÃ©er optimiseur
         optimizer = ConstrainedOptimizer(
             self.parameters(),
             lr=self.lr
         )
 
-        # Créer trainer
+        # CrÃ©er trainer
         trainer = HAMLTrainer(
             model=self,
             optimizer=optimizer,
@@ -426,17 +427,17 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
             verbose=True
         )
 
-        # Entraîner
+        # EntraÃ®ner
         history = trainer.train(X_train, y_train, X_val, y_val)
 
         return history
 
     def forward(self, X):
         """
-        Intègre le système jusqu'à convergence et retourne les états finaux.
+        IntÃ¨gre le systÃ¨me jusqu'Ã  convergence et retourne les Ã©tats finaux.
 
         Args:
-            X (torch.Tensor): Données (batch, n_features)
+            X (torch.Tensor): DonnÃ©es (batch, n_features)
 
         Returns:
             tuple: (final_states, n_steps, converged)
@@ -444,20 +445,20 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
         # Conditions initiales : projection sur tous les niveaux
         initial_states = self.spaces(X)
 
-        # Intégration ODE
+        # IntÃ©gration ODE
         final_states, n_steps, converged, _ = self.integrator.integrate(initial_states)
 
         return final_states, n_steps, converged
 
     def predict(self, X):
         """
-        Prédit les classes.
+        PrÃ©dit les classes.
 
         Args:
-            X (np.ndarray): Données (n_samples, n_features)
+            X (np.ndarray): DonnÃ©es (n_samples, n_features)
 
         Returns:
-            np.ndarray: Prédictions (n_samples,)
+            np.ndarray: PrÃ©dictions (n_samples,)
         """
         if not self.is_fitted_:
             raise RuntimeError("Model not fitted. Call fit() first.")
@@ -478,13 +479,13 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
 
     def predict_proba(self, X):
         """
-        Prédit les probabilités de classe.
+        PrÃ©dit les probabilitÃ©s de classe.
 
         Args:
-            X (np.ndarray): Données (n_samples, n_features)
+            X (np.ndarray): DonnÃ©es (n_samples, n_features)
 
         Returns:
-            np.ndarray: Probabilités (n_samples, n_classes)
+            np.ndarray: ProbabilitÃ©s (n_samples, n_classes)
         """
         if not self.is_fitted_:
             raise RuntimeError("Model not fitted. Call fit() first.")
@@ -497,7 +498,7 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
             final_states, _, _ = self.forward(X_torch)
             scores = self._compute_hierarchical_scores(final_states)
 
-            # Softmax pour probabilités
+            # Softmax pour probabilitÃ©s
             probs = torch.softmax(scores, dim=1)
 
         return probs.cpu().numpy()
@@ -507,7 +508,7 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
         Calcule l'accuracy (interface scikit-learn).
 
         Args:
-            X (np.ndarray): Données
+            X (np.ndarray): DonnÃ©es
             y (np.ndarray): Labels vrais
 
         Returns:
@@ -522,29 +523,44 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
             return 1.0
         if self.level_score_weighting == 'exponential':
             return float(2 ** level_idx)
+        if self.level_score_weighting == 'learned_softmax':
+            weights = torch.softmax(self.level_weight_logits, dim=0)
+            return float(weights[level_idx].detach().item())
         raise ValueError(
-            f"Unknown level_score_weighting='{self.level_score_weighting}'. "
-            "Use 'uniform' or 'exponential'."
+            "Unknown level_score_weighting='{}'. Use 'uniform', 'exponential' or 'learned_softmax'.".format(self.level_score_weighting)
+        )
+
+    def _get_level_weights_tensor(self, device):
+        """Retourne les poids d'agrégation sous forme de tenseur."""
+        if self.level_score_weighting == 'uniform':
+            return torch.ones(self.n_levels, device=device, dtype=torch.float32)
+        if self.level_score_weighting == 'exponential':
+            return torch.tensor([2 ** l for l in range(self.n_levels)], device=device, dtype=torch.float32)
+        if self.level_score_weighting == 'learned_softmax':
+            return torch.softmax(self.level_weight_logits.to(device), dim=0)
+        raise ValueError(
+            "Unknown level_score_weighting='{}'. Use 'uniform', 'exponential' or 'learned_softmax'.".format(self.level_score_weighting)
         )
 
     def _compute_hierarchical_scores(self, final_states):
         """Agrège les scores classe par classe sur tous les niveaux."""
         batch_size = final_states[0].shape[0]
         scores = torch.zeros(batch_size, self.n_classes_, device=self.device)
+        level_weights = self._get_level_weights_tensor(final_states[0].device)
         for l, (level, state) in enumerate(zip(self.levels, final_states)):
             level_scores = level.predict_class_scores(state)
-            scores += self._level_weight(l) * level_scores
+            scores += level_weights[l] * level_scores
         return scores
 
     def get_final_states(self, X):
         """
-        Retourne les états finaux après convergence (pour visualisation).
+        Retourne les Ã©tats finaux aprÃ¨s convergence (pour visualisation).
 
         Args:
-            X (np.ndarray): Données
+            X (np.ndarray): DonnÃ©es
 
         Returns:
-            list[np.ndarray]: États finaux à chaque niveau
+            list[np.ndarray]: Ã‰tats finaux Ã  chaque niveau
         """
         X = self.scaler.transform(X)
         X_torch = torch.from_numpy(X).float().to(self.device)
@@ -557,10 +573,10 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
 
     def diagnostics(self, X, y=None):
         """
-        Retourne des diagnostics d'analyse après entraînement.
+        Retourne des diagnostics d'analyse aprÃ¨s entraÃ®nement.
 
         Args:
-            X (np.ndarray): Données d'évaluation
+            X (np.ndarray): DonnÃ©es d'Ã©valuation
             y (np.ndarray, optional): Labels (pour accuracy par niveau)
 
         Returns:
@@ -581,7 +597,7 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
         return results
 
     def get_params(self, deep=True):
-        """Paramètres pour scikit-learn GridSearch."""
+        """ParamÃ¨tres pour scikit-learn GridSearch."""
         return {
             'n_levels': self.n_levels,
             'n_attractors_per_class': self.n_attractors_per_class,
@@ -611,7 +627,7 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
         }
 
     def set_params(self, **params):
-        """Mise à jour des paramètres (scikit-learn)."""
+        """Mise Ã  jour des paramÃ¨tres (scikit-learn)."""
         for key, value in params.items():
             setattr(self, key, value)
         return self

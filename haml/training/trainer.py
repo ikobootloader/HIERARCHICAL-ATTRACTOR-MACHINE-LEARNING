@@ -201,6 +201,8 @@ class HAMLTrainer:
                     epoch_convergence_count += 1
 
                 # Loss
+                if hasattr(self.model, "_get_level_weights_tensor"):
+                    self.loss_fn.level_weights = self.model._get_level_weights_tensor(final_states[0].device)
                 loss_dict = self.loss_fn(
                     final_states,
                     list(self.model.levels),
