@@ -11,3 +11,4 @@ def test_build_variants_b5_level_weighting():
     names = [name for name, _ in variants]
     assert "level_weight_exponential" in names
     assert "level_weight_uniform" in names
+    assert "level_weight_learned_softmax" in names

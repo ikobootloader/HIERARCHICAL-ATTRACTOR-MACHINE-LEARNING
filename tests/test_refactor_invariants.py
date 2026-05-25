@@ -60,6 +60,11 @@ def test_level_weighting_modes():
     assert model_uniform._level_weight(0) == 1.0
     assert model_uniform._level_weight(3) == 1.0
 
+    model_learned = HAML(level_score_weighting="learned_softmax")
+    weights = model_learned._get_level_weights_tensor(device="cpu")
+    assert weights.shape[0] == model_learned.n_levels
+    assert torch.isclose(weights.sum(), torch.tensor(1.0), atol=1e-6)
+
     model_invalid = HAML(level_score_weighting="invalid")
     with pytest.raises(ValueError):
         model_invalid._level_weight(0)
