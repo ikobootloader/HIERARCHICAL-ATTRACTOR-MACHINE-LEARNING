@@ -68,6 +68,7 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
         max_steps=100,
         tol=1e-4,
         convergence_check_every=5,
+        convergence_per_sample=False,
         learn_projections=None,
         learn_alphas=False,
         lr=0.01,
@@ -104,6 +105,7 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
             dt (float): Pas de temps
             max_steps (int): Max itÃ©rations ODE
             tol (float): TolÃ©rance convergence
+            convergence_per_sample (bool): Active la convergence/gel par Ã©chantillon
             learn_projections (bool | None): Affiner projections PCA.
                 Si None, peut Ãªtre dÃ©cidÃ© par le preset d'entraÃ®nement.
             learn_alphas (bool): Apprendre Î±_bu, Î±_td
@@ -131,6 +133,7 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
         self.max_steps = max_steps
         self.tol = tol
         self.convergence_check_every = convergence_check_every
+        self.convergence_per_sample = convergence_per_sample
         self.learn_projections = learn_projections
         self.learn_alphas = learn_alphas
         self.lr = lr
@@ -341,6 +344,7 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
             max_steps=self.max_steps,
             tol=self.tol,
             convergence_check_every=self.convergence_check_every,
+            convergence_per_sample=self.convergence_per_sample,
         ).to(self.device)
 
         # 5. Loss
@@ -611,6 +615,7 @@ class HAML(nn.Module, BaseEstimator, ClassifierMixin):
             'mu_sep': self.mu_sep,
             'mu_dyn': self.mu_dyn,
             'convergence_check_every': self.convergence_check_every,
+            'convergence_per_sample': self.convergence_per_sample,
             'training_preset': self.training_preset,
             'phase1_max_steps': self.phase1_max_steps,
             'phase2_max_steps': self.phase2_max_steps,

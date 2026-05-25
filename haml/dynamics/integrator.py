@@ -40,6 +40,7 @@ class ODEIntegrator(nn.Module):
         max_steps=100,
         tol=1e-4,
         convergence_check_every=5,
+        convergence_per_sample=False,
     ):
         """
         Args:
@@ -62,6 +63,7 @@ class ODEIntegrator(nn.Module):
         self.max_steps = max_steps
         self.tol = tol
         self.convergence_check_every = max(1, int(convergence_check_every))
+        self.convergence_per_sample = bool(convergence_per_sample)
         self.last_convergence_fraction = None
         self._warned_missing_adjoint = False
 
@@ -192,32 +194,58 @@ class ODEIntegrator(nn.Module):
         self.last_convergence_fraction = None
 
         converged = False
+        active_mask = None
+        if self.convergence_per_sample and self.tol is not None:
+            batch_size = states[0].shape[0]
+            active_mask = torch.ones(batch_size, dtype=torch.bool, device=states[0].device)
 
         for step in range(self.max_steps):
             # Un pas d'intégration
             if self.method == 'euler':
-                new_states = self.step_euler(states)
+                candidate_states = self.step_euler(states)
             elif self.method == 'rk4':
-                new_states = self.step_rk4(states)
+                candidate_states = self.step_rk4(states)
             else:
                 raise ValueError(f"Unknown method: {self.method}")
+
+            if active_mask is not None:
+                mask = active_mask.unsqueeze(1)
+                new_states = [torch.where(mask, x_new, x_old) for x_old, x_new in zip(states, candidate_states)]
+            else:
+                new_states = candidate_states
 
             self.last_convergence_fraction = self._compute_convergence_fraction(states, new_states)
 
             if self.tol is not None and ((step + 1) % self.convergence_check_every == 0):
-                # Reduce on device and sync to host only every N steps.
-                max_velocity = None
-                for x_old, x_new in zip(states, new_states):
-                    dx = x_new - x_old
-                    velocity = torch.norm(dx) / self.dt
-                    max_velocity = velocity if max_velocity is None else torch.maximum(max_velocity, velocity)
+                if active_mask is None:
+                    # Reduce on device and sync to host only every N steps.
+                    max_velocity = None
+                    for x_old, x_new in zip(states, new_states):
+                        dx = x_new - x_old
+                        velocity = torch.norm(dx) / self.dt
+                        max_velocity = velocity if max_velocity is None else torch.maximum(max_velocity, velocity)
 
-                if float(max_velocity.item()) < float(self.tol):
-                    converged = True
-                    states = new_states
-                    if return_trajectory:
-                        trajectory.append(states)
-                    break
+                    if float(max_velocity.item()) < float(self.tol):
+                        converged = True
+                        states = new_states
+                        if return_trajectory:
+                            trajectory.append(states)
+                        break
+                else:
+                    max_vel_per_sample = None
+                    for x_old, x_new in zip(states, new_states):
+                        dx = x_new - x_old
+                        vel = torch.norm(dx, dim=1) / self.dt
+                        max_vel_per_sample = vel if max_vel_per_sample is None else torch.maximum(max_vel_per_sample, vel)
+
+                    newly_converged = (max_vel_per_sample < float(self.tol)) & active_mask
+                    active_mask = active_mask & (~newly_converged)
+                    if not bool(active_mask.any().item()):
+                        converged = True
+                        states = new_states
+                        if return_trajectory:
+                            trajectory.append(states)
+                        break
 
             states = new_states
 
