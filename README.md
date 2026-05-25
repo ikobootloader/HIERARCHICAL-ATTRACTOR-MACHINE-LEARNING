@@ -559,6 +559,40 @@ preset `fashion_cpu_accuracy`) :
   - le léger gain temps (`~2.6%`) ne compense pas la régression qualité,
   - `exponential` est confirmé comme défaut opérationnel.
 
+Validation B1 (mode de répulsion, Fashion-MNIST, CPU, seeds `42..51`,
+preset `fashion_cpu_accuracy`) :
+- `repulsion_mode='global'` :
+  - `train_time_mean=364.24s` (`std=25.61s`)
+  - `test_accuracy_mean=0.8206` (`std=0.0079`)
+  - `final_train_accuracy_mean=0.88522`
+- `repulsion_mode='inter_class_only'` :
+  - `train_time_mean=1611.12s` (`std=156.11s`)
+  - `test_accuracy_mean=0.8218` (`std=0.0085`)
+  - `final_train_accuracy_mean=0.88524`
+- conclusion B1 :
+  - gain accuracy moyen de `inter_class_only` très faible (`+0.12 point`),
+  - surcoût runtime majeur (`~4.42x` plus lent, `+1246.89s`),
+  - `global` reste le meilleur choix opérationnel.
+
+Benchmark Phase A (baseline vs preset accuracy, seeds `42..46`) :
+- baseline `ultra_fast_train_cpu` (meilleur variant : `median_pairwise+learned`) :
+  - `test_accuracy_mean=0.8180`
+  - `train_time_mean=374.43s`
+- preset `fashion_cpu_accuracy` (meilleur variant) :
+  - `test_accuracy_mean=0.8180`
+  - `train_time_mean=370.44s`
+- conclusion :
+  - pas de gain accuracy mesurable en Phase A,
+  - écart runtime faible et non décisif,
+  - les gains robustes déjà confirmés restent : `learn_projections=True`,
+    `level_score_weighting='exponential'`, `repulsion_mode='global'`.
+
+Extension B5 (chantier pondération) :
+- nouveau mode supporté : `level_score_weighting='learned_softmax'`
+- implémentation cohérente entraînement/inférence :
+  - poids apprenables par niveau (softmax),
+  - mêmes poids utilisés dans la loss de classification et en prédiction.
+
 ### Campagne A - MNIST subset (1500/500, 5 epochs)
 
 Objectif :

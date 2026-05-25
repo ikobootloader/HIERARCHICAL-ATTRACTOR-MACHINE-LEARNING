@@ -347,6 +347,42 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
     - variance test fortement dégradée avec `uniform`,
     - gain temps marginal (`~2.6%`) non pertinent face à la perte qualité,
     - `exponential` confirmé comme défaut opérationnel.
+- Validation B1 complétée (Fashion-MNIST, CPU, seeds `42..51`,
+  preset `fashion_cpu_accuracy`) :
+  - fichier : `experiments/quality_ablation_b1_fashion_cpu_seeds42_51_accuracy_preset.json`
+  - `repulsion_mode='global'` :
+    - `train_time_mean=364.24s` (`std=25.61s`)
+    - `test_acc_mean=0.8206` (`std=0.0079`)
+    - `final_train_acc_mean=0.88522`
+  - `repulsion_mode='inter_class_only'` :
+    - `train_time_mean=1611.12s` (`std=156.11s`)
+    - `test_acc_mean=0.8218` (`std=0.0085`)
+    - `final_train_acc_mean=0.88524`
+  - conclusion :
+    - gain accuracy moyen de `inter_class_only` marginal (`+0.12 point`),
+    - surcoût runtime massif (`~4.42x`, `+1246.89s`),
+    - `global` conservé comme choix opérationnel.
+- Benchmark Phase A complété (baseline vs preset accuracy, seeds `42..46`) :
+  - baseline `ultra_fast_train_cpu` (meilleur variant) :
+    - `test_acc_mean=0.8180`, `train_time_mean=374.43s`
+  - preset `fashion_cpu_accuracy` (meilleur variant) :
+    - `test_acc_mean=0.8180`, `train_time_mean=370.44s`
+  - conclusion :
+    - pas de gain accuracy mesurable,
+    - delta runtime faible/non décisif sur cette phase.
+- Extension B5 implémentée :
+  - nouveau mode `level_score_weighting='learned_softmax'` dans `HAML`,
+  - cohérence entraînement/inférence assurée :
+    - agrégation hiérarchique par softmax de poids appris,
+    - loss de classification alignée via `HAMLTrainer` (`loss_fn.level_weights`).
+  - `experiments/quality_ablation_runtime.py` :
+    - `--ablation b5` inclut maintenant :
+      - `exponential`,
+      - `uniform`,
+      - `learned_softmax`.
+  - tests :
+    - `test_refactor_invariants.py` (invariant softmax des poids),
+    - `test_quality_ablation_runtime_variants.py` (B5 couvre `learned_softmax`).
 - Défaut opérationnel presets runtime ajusté :
   - `training_preset=fast_train_cpu` et `training_preset=ultra_fast_train_cpu`
     activent désormais `learn_projections=True` quand le paramètre n'est pas
