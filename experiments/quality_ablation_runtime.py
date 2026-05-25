@@ -89,6 +89,7 @@ def run_single(args, seed, overrides):
         use_vectorized_levels=True,
         training_preset=args.training_preset,
         convergence_check_every=args.convergence_check_every,
+        convergence_per_sample=args.convergence_per_sample,
         mu_dyn=0.0,
         lr=args.lr,
         n_epochs=args.n_epochs,
@@ -170,6 +171,7 @@ def _base_report(args):
             "training_preset": args.training_preset,
             "batch_size": args.batch_size,
             "device": args.device,
+            "convergence_per_sample": bool(args.convergence_per_sample),
         },
         "variants": {},
     }
@@ -274,6 +276,11 @@ def parse_args():
     p.add_argument("--n-attractors-per-class", type=int, default=2)
     p.add_argument("--batch-size", type=int, default=128)
     p.add_argument("--convergence-check-every", type=int, default=5)
+    p.add_argument(
+        "--convergence-per-sample",
+        action="store_true",
+        help="Enable per-sample convergence freeze inside ODE integrator.",
+    )
     p.add_argument("--lr", type=float, default=0.01)
     p.add_argument("--device", choices=["cpu", "cuda", "auto"], default="cpu")
     p.add_argument(
