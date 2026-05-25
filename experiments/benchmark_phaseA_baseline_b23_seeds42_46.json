@@ -1,0 +1,211 @@
+{
+  "ablation": "b23",
+  "dataset": "fashion_mnist",
+  "seeds": [
+    42,
+    43,
+    44,
+    45,
+    46
+  ],
+  "config": {
+    "n_train": 5000,
+    "n_test": 1000,
+    "n_epochs": 10,
+    "phase1_epochs": 3,
+    "phase2_epochs": 3,
+    "training_preset": "ultra_fast_train_cpu",
+    "batch_size": 128,
+    "device": "cpu"
+  },
+  "variants": {
+    "sigma_sqrt_d_std_proj_fixed": {
+      "runs": [
+        {
+          "seed": 42,
+          "train_time_sec": 518.8630475530008,
+          "test_accuracy": 0.798,
+          "final_train_accuracy": 0.8216
+        },
+        {
+          "seed": 43,
+          "train_time_sec": 480.2251024690013,
+          "test_accuracy": 0.814,
+          "final_train_accuracy": 0.8284
+        },
+        {
+          "seed": 44,
+          "train_time_sec": 459.0081870489994,
+          "test_accuracy": 0.802,
+          "final_train_accuracy": 0.8186
+        },
+        {
+          "seed": 45,
+          "train_time_sec": 461.3104912050003,
+          "test_accuracy": 0.806,
+          "final_train_accuracy": 0.8144
+        },
+        {
+          "seed": 46,
+          "train_time_sec": 470.24306647199774,
+          "test_accuracy": 0.786,
+          "final_train_accuracy": 0.8184
+        }
+      ],
+      "summary": {
+        "n_runs": 5,
+        "train_time_sec_mean": 477.9299789495999,
+        "train_time_sec_std": 21.790428643424512,
+        "test_accuracy_mean": 0.8012,
+        "test_accuracy_std": 0.009260669522232158,
+        "final_train_accuracy_mean": 0.82028,
+        "final_train_accuracy_std": 0.004660643732361447
+      },
+      "overrides": {
+        "sigma_init_mode": "sqrt_d_std",
+        "learn_projections": false
+      }
+    },
+    "sigma_sqrt_d_std_proj_learned": {
+      "runs": [
+        {
+          "seed": 42,
+          "train_time_sec": 343.40274708700235,
+          "test_accuracy": 0.809,
+          "final_train_accuracy": 0.8838
+        },
+        {
+          "seed": 43,
+          "train_time_sec": 357.53437079399737,
+          "test_accuracy": 0.82,
+          "final_train_accuracy": 0.893
+        },
+        {
+          "seed": 44,
+          "train_time_sec": 361.4945736030022,
+          "test_accuracy": 0.822,
+          "final_train_accuracy": 0.8846
+        },
+        {
+          "seed": 45,
+          "train_time_sec": 357.4037445620015,
+          "test_accuracy": 0.818,
+          "final_train_accuracy": 0.8926
+        },
+        {
+          "seed": 46,
+          "train_time_sec": 430.21573333799824,
+          "test_accuracy": 0.814,
+          "final_train_accuracy": 0.895
+        }
+      ],
+      "summary": {
+        "n_runs": 5,
+        "train_time_sec_mean": 370.0102338768003,
+        "train_time_sec_std": 30.723761882443046,
+        "test_accuracy_mean": 0.8166,
+        "test_accuracy_std": 0.004630334761116057,
+        "final_train_accuracy_mean": 0.8897999999999999,
+        "final_train_accuracy_std": 0.004651021393199543
+      },
+      "overrides": {
+        "sigma_init_mode": "sqrt_d_std",
+        "learn_projections": true
+      }
+    },
+    "sigma_median_pairwise_proj_fixed": {
+      "runs": [
+        {
+          "seed": 42,
+          "train_time_sec": 457.6577740020002,
+          "test_accuracy": 0.801,
+          "final_train_accuracy": 0.824
+        },
+        {
+          "seed": 43,
+          "train_time_sec": 463.4059079019971,
+          "test_accuracy": 0.812,
+          "final_train_accuracy": 0.829
+        },
+        {
+          "seed": 44,
+          "train_time_sec": 451.4461052299994,
+          "test_accuracy": 0.801,
+          "final_train_accuracy": 0.8194
+        },
+        {
+          "seed": 45,
+          "train_time_sec": 469.9525872510021,
+          "test_accuracy": 0.807,
+          "final_train_accuracy": 0.8146
+        },
+        {
+          "seed": 46,
+          "train_time_sec": 480.7629690290014,
+          "test_accuracy": 0.787,
+          "final_train_accuracy": 0.8168
+        }
+      ],
+      "summary": {
+        "n_runs": 5,
+        "train_time_sec_mean": 464.64506868280006,
+        "train_time_sec_std": 10.124494135978043,
+        "test_accuracy_mean": 0.8016,
+        "test_accuracy_std": 0.008380930735902794,
+        "final_train_accuracy_mean": 0.8207599999999999,
+        "final_train_accuracy_std": 0.005174398515769718
+      },
+      "overrides": {
+        "sigma_init_mode": "median_pairwise",
+        "learn_projections": false
+      }
+    },
+    "sigma_median_pairwise_proj_learned": {
+      "runs": [
+        {
+          "seed": 42,
+          "train_time_sec": 374.33716788400125,
+          "test_accuracy": 0.816,
+          "final_train_accuracy": 0.8758
+        },
+        {
+          "seed": 43,
+          "train_time_sec": 380.98984566599756,
+          "test_accuracy": 0.822,
+          "final_train_accuracy": 0.8852
+        },
+        {
+          "seed": 44,
+          "train_time_sec": 347.963873020999,
+          "test_accuracy": 0.812,
+          "final_train_accuracy": 0.8856
+        },
+        {
+          "seed": 45,
+          "train_time_sec": 351.5808349990002,
+          "test_accuracy": 0.822,
+          "final_train_accuracy": 0.8872
+        },
+        {
+          "seed": 46,
+          "train_time_sec": 417.2799286510017,
+          "test_accuracy": 0.818,
+          "final_train_accuracy": 0.8922
+        }
+      ],
+      "summary": {
+        "n_runs": 5,
+        "train_time_sec_mean": 374.43033004419993,
+        "train_time_sec_std": 24.90661276177985,
+        "test_accuracy_mean": 0.818,
+        "test_accuracy_std": 0.0037947331922020236,
+        "final_train_accuracy_mean": 0.8852,
+        "final_train_accuracy_std": 0.005320150373814625
+      },
+      "overrides": {
+        "sigma_init_mode": "median_pairwise",
+        "learn_projections": true
+      }
+    }
+  }
+}

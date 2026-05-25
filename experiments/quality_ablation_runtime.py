@@ -226,6 +226,7 @@ def build_variants(ablation):
         return [
             ("level_weight_exponential", {"level_score_weighting": "exponential"}),
             ("level_weight_uniform", {"level_score_weighting": "uniform"}),
+            ("level_weight_learned_softmax", {"level_score_weighting": "learned_softmax"}),
         ]
     if ablation == "b23":
         return [
