@@ -51,13 +51,17 @@ Notes de configuration :
 - `rho_sigma_ratio` permet de contrôler explicitement l'initialisation
   de la portée de répulsion (`rho_init = rho_sigma_ratio * sigma_init`).
 - `level_score_weighting` contrôle l'agrégation multi-niveaux
-  (`'exponential'` par défaut, option `'uniform'`).
+  (`'exponential'` par défaut, options `'uniform'` et `'learned_softmax'`).
 - `use_vectorized_levels=True` active un niveau dynamique vectorisé
   (accélération forward/backward, comportement par défaut inchangé si `False`).
 - `repulsion_mode` contrôle la sémantique de répulsion dans le niveau vectorisé
   (`'global'` par défaut, option `'inter_class_only'`).
 - `convergence_check_every` contrôle la fréquence de vérification de convergence
   dans l'intégrateur ODE (défaut `5`).
+- `convergence_per_sample=True` active un arrêt/gel de convergence par échantillon
+  dans l'intégrateur ODE (les samples convergés sont gelés sans attendre tout le batch).
+- Le runner d'ablation `experiments/quality_ablation_runtime.py` expose aussi
+  `--convergence-per-sample` pour comparer rapidement ON/OFF à protocole constant.
 - `tol=None` permet de désactiver complètement l'arrêt anticipé de convergence
   (intégration systématique jusqu'à `max_steps`).
 - `mu_dyn=0.0` (profilage) évite de stocker inutilement la trajectoire ODE
@@ -548,15 +552,19 @@ Validation preset `fashion_cpu_runtime` (Fashion-MNIST, CPU, seeds `42..51`) :
 Validation B5 (pondération inter-niveaux, Fashion-MNIST, CPU, seeds `42..51`,
 preset `fashion_cpu_accuracy`) :
 - `level_score_weighting='exponential'` :
-  - `train_time_mean=359.04s` (`std=24.46s`)
+  - `train_time_mean=436.12s` (`std=32.46s`)
   - `test_accuracy_mean=0.8206` (`std=0.0079`)
 - `level_score_weighting='uniform'` :
-  - `train_time_mean=349.63s` (`std=18.03s`)
-  - `test_accuracy_mean=0.7547` (`std=0.0447`)
+  - `train_time_mean=425.01s` (`std=3.72s`)
+  - `test_accuracy_mean=0.8100` (`std=0.0107`)
+- `level_score_weighting='learned_softmax'` :
+  - `train_time_mean=411.31s` (`std=7.89s`)
+  - `test_accuracy_mean=0.8075` (`std=0.0126`)
 - conclusion B5 :
-  - `uniform` perd `-6.59 points` d'accuracy moyenne vs `exponential`,
-  - `uniform` est nettement moins stable (écart-type test fortement accru),
-  - le léger gain temps (`~2.6%`) ne compense pas la régression qualité,
+  - `uniform` perd `-1.06 point` d'accuracy moyenne vs `exponential`,
+  - `learned_softmax` perd `-1.31 point` d'accuracy moyenne vs `exponential`,
+  - `learned_softmax` est le plus rapide, mais le gain temps ne compense pas
+    la perte de qualité test,
   - `exponential` est confirmé comme défaut opérationnel.
 
 Validation B1 (mode de répulsion, Fashion-MNIST, CPU, seeds `42..51`,

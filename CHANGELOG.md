@@ -6,6 +6,16 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 
 ## [Non publié]
 
+### Modifié - 2026-05-25
+- Intégrateur ODE: ajout du mode `convergence_per_sample` pour geler les échantillons déjà convergés sans attendre le batch complet.
+- API modèle: `HAML` expose désormais `convergence_per_sample` et le transmet à `ODEIntegrator`.
+- Runner d'ablation: ajout du flag CLI `--convergence-per-sample` dans `experiments/quality_ablation_runtime.py`.
+- Pondération inter-niveaux: support explicite de `level_score_weighting='learned_softmax'` dans la documentation utilisateur.
+- Tests ajoutés/étendus:
+  - `tests/test_integrator_convergence_checks.py` (gel effectif par échantillon),
+  - `tests/test_refactor_invariants.py` (exposition paramètre `convergence_per_sample`),
+  - `tests/test_quality_ablation_runtime_resume.py` (compatibilité reprise avec nouveau flag).
+
 ### Modifié - 2026-05-18
 - Ajout d'un script de profilage runtime `experiments/profile_training_runtime.py` pour mesurer objectivement les coûts avant optimisation :
   - profilage global via `cProfile` (`.prof` + tops `cumtime`/`tottime`),
@@ -335,17 +345,21 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
     - `fashion_cpu_runtime` devient le preset speed-first.
 - Validation B5 complétée (Fashion-MNIST, CPU, seeds `42..51`,
   preset `fashion_cpu_accuracy`) :
-  - fichier : `experiments/quality_ablation_b5_fashion_cpu_seeds42_51_accuracy_preset.json`
+  - fichier : `experiments/quality_ablation_b5_fashion_cpu_seeds42_51_accuracy_preset_with_learned.json`
   - `level_score_weighting='exponential'` :
-    - `train_time_mean=359.04s` (`std=24.46s`)
+    - `train_time_mean=436.12s` (`std=32.46s`)
     - `test_acc_mean=0.8206` (`std=0.0079`)
   - `level_score_weighting='uniform'` :
-    - `train_time_mean=349.63s` (`std=18.03s`)
-    - `test_acc_mean=0.7547` (`std=0.0447`)
+    - `train_time_mean=425.01s` (`std=3.72s`)
+    - `test_acc_mean=0.8100` (`std=0.0107`)
+  - `level_score_weighting='learned_softmax'` :
+    - `train_time_mean=411.31s` (`std=7.89s`)
+    - `test_acc_mean=0.8075` (`std=0.0126`)
   - conclusion :
-    - `uniform` perd `-6.59 points` d'accuracy moyenne,
-    - variance test fortement dégradée avec `uniform`,
-    - gain temps marginal (`~2.6%`) non pertinent face à la perte qualité,
+    - `uniform` perd `-1.06 point` d'accuracy moyenne vs `exponential`,
+    - `learned_softmax` perd `-1.31 point` d'accuracy moyenne vs `exponential`,
+    - `learned_softmax` est le plus rapide, mais le gain temps n'est pas
+      suffisant pour compenser la perte de qualité test,
     - `exponential` confirmé comme défaut opérationnel.
 - Validation B1 complétée (Fashion-MNIST, CPU, seeds `42..51`,
   preset `fashion_cpu_accuracy`) :
