@@ -154,6 +154,7 @@ def test_haml_exposes_phase_runtime_knobs_in_get_params():
         phase3_integrator_method="rk4",
         diagnostics_every_epochs=2,
         diagnostics_subset_size=512,
+        convergence_per_sample=True,
     )
     params = model.get_params()
     assert params["phase1_max_steps"] == 20
@@ -164,6 +165,7 @@ def test_haml_exposes_phase_runtime_knobs_in_get_params():
     assert params["phase3_integrator_method"] == "rk4"
     assert params["diagnostics_every_epochs"] == 2
     assert params["diagnostics_subset_size"] == 512
+    assert params["convergence_per_sample"] is True
 
 
 def test_haml_fast_train_cpu_preset_applies_defaults():

@@ -23,6 +23,7 @@ def _args(out_json, resume=True):
         training_preset="ultra_fast_train_cpu",
         batch_size=128,
         device="cpu",
+        convergence_per_sample=False,
         out_json=str(out_json),
         resume=resume,
     )

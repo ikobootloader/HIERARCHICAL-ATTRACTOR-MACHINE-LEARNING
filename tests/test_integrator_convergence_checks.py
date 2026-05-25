@@ -91,3 +91,26 @@ def test_tol_none_disables_early_stopping():
     _, steps, converged, _ = integrator.integrate(initial, return_trajectory=False)
     assert steps == 7
     assert converged is False
+
+
+def test_per_sample_convergence_freezes_converged_samples():
+    level = _LinearLevel()
+    coupling = _ZeroCoupling()
+    integrator = ODEIntegrator(
+        levels=[level],
+        coupling=coupling,
+        method="euler",
+        dt=0.5,
+        max_steps=20,
+        tol=1e-4,
+        convergence_check_every=1,
+        convergence_per_sample=True,
+    )
+    initial = [torch.tensor([[1e-5], [1.0]], dtype=torch.float32)]
+    _, _, converged, trajectory = integrator.integrate(initial, return_trajectory=True)
+
+    sample0_values = [states[0][0, 0].item() for states in trajectory]
+    # Sample 0 converges at first check and must remain frozen afterwards.
+    assert sample0_values[1] == sample0_values[2]
+    assert sample0_values[2] == sample0_values[-1]
+    assert converged is True
